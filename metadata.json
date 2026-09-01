@@ -1,0 +1,6 @@
+{
+  "name": "FlowPay",
+  "description": "Frictionless AI agent journey from initial product discovery to instant payment link generation and checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
