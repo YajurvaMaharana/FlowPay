@@ -10,6 +10,7 @@ import {
   calculateCartTool, generatePaymentTool, processUserMessage, 
   sanitizePii, handlePaymentFailureTool 
 } from './services/agentEngine';
+import { simulateBuyerBot } from './services/buyerBot';
 
 // Page Views & Global Layout
 import { EditorialHero } from './components/EditorialHero';
@@ -24,13 +25,13 @@ import { AlphaCartSidebar } from './components/AlphaCartSidebar';
 
 // Modals
 import { ProductDetailModal } from './components/ProductDetailModal';
-import { PaymentModal } from './components/PaymentModal';
 import { InvoiceModal } from './components/InvoiceModal';
 import { ToolsSchemaModal } from './components/ToolsSchemaModal';
 import { AuthModal } from './components/AuthModal';
 import { MyOrdersModal } from './components/MyOrdersModal';
 import { SavedGearModal } from './components/SavedGearModal';
 import { AccountSettingsModal } from './components/AccountSettingsModal';
+import { RazorpayModal } from './components/RazorpayModal';
 
 export function App() {
   // Navigation Routing State
@@ -63,6 +64,8 @@ export function App() {
   const [isAgentSidebarOpen, setIsAgentSidebarOpen] = useState(false);
   const [agentSidebarTab, setAgentSidebarTab] = useState<'chat' | 'audit' | 'catalog' | 'cart' | 'security'>('chat');
   const [activeScenario, setActiveScenario] = useState<TestScenario | null>(null);
+  const [isA2AMode, setIsA2AMode] = useState(false);
+  const [isA2ATyping, setIsA2ATyping] = useState(false);
 
   // Cart & Calculation State
   const [cart, setCart] = useState<CartItem[]>([
@@ -90,7 +93,8 @@ export function App() {
   // Modal States
   const [selectedProductDetail, setSelectedProductDetail] = useState<Product | null>(null);
   const [activePaymentOrder, setActivePaymentOrder] = useState<PaymentOrder | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
+  const [razorpayOrder, setRazorpayOrder] = useState<PaymentOrder | null>(null);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<PaymentOrder | null>(null);
 
@@ -118,6 +122,257 @@ export function App() {
     }
   ]);
 
+
+  // Handle User Message Submission
+  const handleSendMessage = async (text: string, imageBase64?: string, isFromBot = false) => {
+    setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
+
+    // Check PII in user text
+    const piiCheck = sanitizePii(text);
+    const userMsgId = `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    if (isFromBot) {
+      const userMsg: Message = {
+        id: userMsgId,
+        sender: 'user',
+        content: '',
+        timestamp: new Date().toISOString(),
+        isPiiMasked: piiCheck.hasPii,
+        attachment: imageBase64 ? { type: 'image', url: imageBase64 } : undefined
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      
+      const words = piiCheck.sanitizedText.split(' ');
+      let currentWordIndex = 0;
+      const streamChunkSize = Math.max(1, Math.floor(words.length / 10));
+
+      await new Promise<void>((resolve) => {
+        const interval = setInterval(() => {
+          currentWordIndex += streamChunkSize;
+          if (currentWordIndex >= words.length) {
+            clearInterval(interval);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === userMsgId ? { ...m, content: piiCheck.sanitizedText } : m))
+            );
+            resolve();
+          } else {
+            const partialText = words.slice(0, currentWordIndex).join(' ');
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === userMsgId ? { ...m, content: partialText } : m
+              )
+            );
+          }
+        }, 30);
+      });
+    } else {
+      const userMsg: Message = {
+        id: userMsgId,
+        sender: 'user',
+        content: piiCheck.sanitizedText,
+        timestamp: new Date().toISOString(),
+        isPiiMasked: piiCheck.hasPii,
+        attachment: imageBase64 ? { type: 'image', url: imageBase64 } : undefined
+      };
+      setMessages((prev) => [...prev, userMsg]);
+    }
+    
+    setIsLoading(true);
+
+    try {
+      if (imageBase64) {
+        // --- VISION WORKFLOW ---
+        let visionResult: { detectedIssue: string; productIds?: string[] } = {
+          detectedIssue: "Ergonomic workspace optimization detected (Laptop riser & dual display setup recommended).",
+          productIds: ["prod_laptop_stand", "prod_lumina_monitor"]
+        };
+
+        try {
+          const response = await fetch('/api/vision', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64, textPrompt: text })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.detectedIssue) {
+              visionResult = data;
+            }
+          }
+        } catch {
+          // Graceful fallback to default ergonomic workspace recommendation
+        }
+        
+        let recommendedProducts = PRODUCTS.filter(p => visionResult.productIds?.includes(p.id));
+        if (recommendedProducts.length === 0) {
+          recommendedProducts = [
+            PRODUCTS.find(p => p.id === 'prod_apexbook_pro16') || PRODUCTS[0],
+            PRODUCTS.find(p => p.id === 'prod_lumina_monitor') || PRODUCTS[1]
+          ];
+        }
+
+        const primaryProduct = recommendedProducts[0];
+        const secondaryProduct = recommendedProducts[1];
+        const newCart: CartItem[] = [{ product: primaryProduct, quantity: 1 }];
+        setCart(newCart);
+
+        const calcSingle = calculateCartTool(newCart, 0);
+
+        const visionToolCall: ToolCallEvent = {
+          id: `tool_vision_${Date.now()}`,
+          name: 'analyze_workspace_vision',
+          input: { prompt: text || 'Workspace Inspection', hasImage: true },
+          output: {
+            detectedIssue: visionResult.detectedIssue,
+            recommendedIds: recommendedProducts.map(p => p.id),
+            primaryProduct: primaryProduct.name
+          },
+          status: 'success',
+          timestamp: new Date().toISOString()
+        };
+
+        setToolCallsHistory(prev => [...prev, visionToolCall]);
+        
+        const agentMsgId = `msg_agent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const agentMsg: Message = {
+          id: agentMsgId,
+          sender: 'agent',
+          content: `🔍 **Multimodal Workspace Analysis Complete**\n\nI evaluated your desk setup: **${visionResult.detectedIssue}**\n\nI have matched your setup with high-precision merchant gear and staged the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}) into your cart.\n\n✨ **Key Highlights**:\n${primaryProduct.features.slice(0, 3).map(f => `• ${f}`).join('\n')}\n\n${secondaryProduct ? `💡 **Recommended Companion**: Add the **${secondaryProduct.name}** for a complete high-performance workstation.` : ''}`,
+          timestamp: new Date().toISOString(),
+          toolCalls: [visionToolCall],
+          visionAnalysis: {
+            detectedIssue: visionResult.detectedIssue,
+            products: recommendedProducts
+          },
+          suggestedProducts: recommendedProducts,
+          cartCalculation: calcSingle.calculation,
+          confirmationGated: true,
+          gatedAction: {
+            type: 'PROCEED_CHECKOUT',
+            label: `Proceed with ${primaryProduct.name} (₹${calcSingle.calculation.total.toLocaleString('en-IN')})`,
+            items: newCart,
+            amount: calcSingle.calculation.total,
+            email: user.email
+          },
+          quickReplies: [
+            `Checkout with ${primaryProduct.name.split(' ')[0]}`,
+            secondaryProduct ? `Add ${secondaryProduct.name.split(' ')[0]} (+₹${secondaryProduct.price.toLocaleString('en-IN')})` : 'Add Companion',
+            'Apply 10% Discount',
+            'View Full Specs'
+          ]
+        };
+        
+        setMessages((prev) => [...prev, agentMsg]);
+      } else {
+        // --- STANDARD CONVERSATIONAL WORKFLOW ---
+        const response = await processUserMessage(text, {
+          cart,
+          userEmail: user.email,
+          currency: 'INR',
+          appliedDiscount,
+          couponCode,
+          lastGeneratedOrder: activePaymentOrder || undefined,
+          messagesHistory: messages
+        });
+
+        // Update state based on agent response
+        if (response.updatedCart) setCart(response.updatedCart);
+        if (response.appliedDiscount !== undefined) setAppliedDiscount(response.appliedDiscount);
+        if (response.couponCode !== undefined) setCouponCode(response.couponCode);
+        if (response.updatedOrder) {
+          setActivePaymentOrder(response.updatedOrder);
+          setUser((prev) => {
+            const existingIdx = prev.orders.findIndex((o) => o.orderId === response.updatedOrder!.orderId);
+            if (existingIdx >= 0) {
+              const copy = [...prev.orders];
+              copy[existingIdx] = response.updatedOrder!;
+              return { ...prev, orders: copy };
+            }
+            return { ...prev, orders: [response.updatedOrder!, ...prev.orders] };
+          });
+        }
+
+        // Telemetry updates
+        if (response.newSecurityAlerts && response.newSecurityAlerts.length > 0) {
+          setSecurityAlerts((prev) => [...prev, ...response.newSecurityAlerts!]);
+          
+          let attacks = 0;
+          let piiCount = 0;
+          let discCaps = 0;
+          let gated = 0;
+
+          for (const alert of response.newSecurityAlerts) {
+            if (alert.type === 'PROMPT_INJECTION_ATTEMPT') attacks++;
+            if (alert.type === 'PII_DETECTED_AND_MASKED') piiCount++;
+            if (alert.type === 'DISCOUNT_LIMIT_ENFORCED') discCaps++;
+            if (alert.type === 'UNAUTHORIZED_PAYMENT_GATE_BLOCKED') gated++;
+          }
+
+          setSecurityMetrics((prev) => ({
+            ...prev,
+            totalInteractions: prev.totalInteractions + 1,
+            attacksBlocked: prev.attacksBlocked + attacks,
+            piiMaskedCount: prev.piiMaskedCount + piiCount,
+            discountLimitsEnforced: prev.discountLimitsEnforced + discCaps,
+            gatedConfirmationsEnforced: prev.gatedConfirmationsEnforced + gated,
+            yieldRetained: response.appliedDiscount !== undefined ? 100 - response.appliedDiscount : prev.yieldRetained,
+            zeroTrustStatus: (attacks > 0 || piiCount > 0) ? 'ACTIVE_DEFENSE' : 'OPTIMAL'
+          }));
+        } else {
+          setSecurityMetrics((prev) => ({
+            ...prev,
+            totalInteractions: prev.totalInteractions + 1,
+            yieldRetained: response.appliedDiscount !== undefined ? 100 - response.appliedDiscount : prev.yieldRetained,
+          }));
+        }
+
+        if (response.message.toolCalls) {
+          setToolCallsHistory((prev) => [...prev, ...response.message.toolCalls!]);
+        }
+
+        // Stream text response smoothly
+        const finalMsg = response.message;
+        const fullContent = finalMsg.content;
+        const initialPartialMsg: Message = {
+          ...finalMsg,
+          content: ''
+        };
+
+        setMessages((prev) => [...prev, initialPartialMsg]);
+
+        const words = fullContent.split(' ');
+        let currentWordIndex = 0;
+        const streamChunkSize = Math.max(1, Math.floor(words.length / 18));
+
+        await new Promise<void>((resolve) => {
+          const interval = setInterval(() => {
+            currentWordIndex += streamChunkSize;
+            if (currentWordIndex >= words.length) {
+              clearInterval(interval);
+              setMessages((prev) =>
+                prev.map((m) => (m.id === finalMsg.id ? finalMsg : m))
+              );
+              resolve();
+            } else {
+              const partialText = words.slice(0, currentWordIndex).join(' ');
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === finalMsg.id ? { ...m, content: partialText } : m
+                )
+              );
+            }
+          }, 22);
+        });
+      }
+    } catch (err) {
+      console.error('Agent processing error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   // Check if there is an unresolved gated confirmation in the conversation
   const lastAgentMsg = [...messages].reverse().find((m) => m.sender === 'agent');
   const pendingGatedAction = Boolean(lastAgentMsg?.gatedAction && (!activePaymentOrder || activePaymentOrder.status !== 'paid'));
@@ -133,144 +388,174 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentTab]);
 
-  // Handle User Message Submission
-  const handleSendMessage = async (text: string) => {
-    setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
 
-    // Check PII in user text
-    const piiCheck = sanitizePii(text);
-    
-    // Append user message immediately
-    const userMsg: Message = {
-      id: `msg_user_${Date.now()}`,
-      sender: 'user',
-      content: piiCheck.sanitizedText,
-      timestamp: new Date().toISOString(),
-      isPiiMasked: piiCheck.hasPii
-    };
+  
 
-    setMessages((prev) => [...prev, userMsg]);
-    setIsLoading(true);
-
-    try {
-      const response = await processUserMessage(text, {
-        cart,
-        userEmail: user.email,
-        currency: 'INR',
-        appliedDiscount,
-        couponCode,
-        lastGeneratedOrder: activePaymentOrder || undefined,
-        messagesHistory: messages
-      });
-
-      // Update state based on agent response
-      if (response.updatedCart) setCart(response.updatedCart);
-      if (response.appliedDiscount !== undefined) setAppliedDiscount(response.appliedDiscount);
-      if (response.couponCode !== undefined) setCouponCode(response.couponCode);
-      if (response.updatedOrder) {
-        setActivePaymentOrder(response.updatedOrder);
-        // Also sync with user orders
-        setUser((prev) => {
-          const existingIdx = prev.orders.findIndex((o) => o.orderId === response.updatedOrder!.orderId);
-          if (existingIdx >= 0) {
-            const copy = [...prev.orders];
-            copy[existingIdx] = response.updatedOrder!;
-            return { ...prev, orders: copy };
-          }
-          return { ...prev, orders: [response.updatedOrder!, ...prev.orders] };
-        });
+  const handleToggleA2A = () => {
+    setIsA2AMode((prev) => {
+      const next = !prev;
+      if (next) {
+        handleResetSession();
+        setTimeout(() => {
+          handleSendMessage("Hello, I am an automated procurement agent looking to purchase the AeroType Carbon keyboard for my client. My budget cap is ₹8,500. What is your best price?", undefined, true);
+        }, 500);
       }
+      return next;
+    });
+  };
 
-      // Telemetry updates
-      if (response.newSecurityAlerts && response.newSecurityAlerts.length > 0) {
-        setSecurityAlerts((prev) => [...prev, ...response.newSecurityAlerts!]);
-        
-        let attacks = 0;
-        let piiCount = 0;
-        let discCaps = 0;
-        let gated = 0;
-
-        for (const alert of response.newSecurityAlerts) {
-          if (alert.type === 'PROMPT_INJECTION_ATTEMPT') attacks++;
-          if (alert.type === 'PII_DETECTED_AND_MASKED') piiCount++;
-          if (alert.type === 'DISCOUNT_LIMIT_ENFORCED') discCaps++;
-          if (alert.type === 'UNAUTHORIZED_PAYMENT_GATE_BLOCKED') gated++;
+  const handleNextA2ATurn = () => {
+    if (!isA2AMode || isLoading || isA2ATyping) return;
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.sender === 'agent') {
+      if (lastMessage.toolCalls?.some(tc => tc.name === 'generate_payment')) return;
+      const botResponse = simulateBuyerBot(messages, cartCalculation);
+      setIsA2ATyping(true);
+      setTimeout(() => {
+        setIsA2ATyping(false);
+        if (botResponse) {
+          handleSendMessage(botResponse, undefined, true);
         }
-
-        setSecurityMetrics((prev) => ({
-          ...prev,
-          totalInteractions: prev.totalInteractions + 1,
-          attacksBlocked: prev.attacksBlocked + attacks,
-          piiMaskedCount: prev.piiMaskedCount + piiCount,
-          discountLimitsEnforced: prev.discountLimitsEnforced + discCaps,
-          gatedConfirmationsEnforced: prev.gatedConfirmationsEnforced + gated,
-          yieldRetained: response.appliedDiscount !== undefined ? 100 - response.appliedDiscount : prev.yieldRetained,
-          zeroTrustStatus: (attacks > 0 || piiCount > 0) ? 'ACTIVE_DEFENSE' : 'OPTIMAL'
-        }));
-      } else {
-        setSecurityMetrics((prev) => ({
-          ...prev,
-          totalInteractions: prev.totalInteractions + 1,
-          yieldRetained: response.appliedDiscount !== undefined ? 100 - response.appliedDiscount : prev.yieldRetained,
-        }));
-      }
-
-      if (response.message.toolCalls) {
-        setToolCallsHistory((prev) => [...prev, ...response.message.toolCalls!]);
-      }
-
-      // Stream text response smoothly for conversational commerce
-      const finalMsg = response.message;
-      const fullContent = finalMsg.content;
-      const initialPartialMsg: Message = {
-        ...finalMsg,
-        content: ''
-      };
-
-      setMessages((prev) => [...prev, initialPartialMsg]);
-
-      const words = fullContent.split(' ');
-      let currentWordIndex = 0;
-      const streamChunkSize = Math.max(1, Math.floor(words.length / 18));
-
-      await new Promise<void>((resolve) => {
-        const interval = setInterval(() => {
-          currentWordIndex += streamChunkSize;
-          if (currentWordIndex >= words.length) {
-            clearInterval(interval);
-            setMessages((prev) =>
-              prev.map((m) => (m.id === finalMsg.id ? finalMsg : m))
-            );
-            resolve();
-          } else {
-            const partialText = words.slice(0, currentWordIndex).join(' ');
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === finalMsg.id ? { ...m, content: partialText } : m
-              )
-            );
-          }
-        }, 22);
-      });
-
-    } catch (err) {
-      console.error('Agent processing error:', err);
-    } finally {
-      setIsLoading(false);
+      }, 500);
     }
   };
 
-  // Handle Human-in-the-Loop Gated Action Confirmation
+  // Handle Human-in-the-Loop Gated Action Confirmation -> Stage 1: Ephemeral Payment Card
   const handleGatedActionConfirm = (action: NonNullable<Message['gatedAction']>) => {
     setSecurityMetrics((prev) => ({
       ...prev,
       gatedConfirmationsEnforced: prev.gatedConfirmationsEnforced + 1
     }));
 
-    handleSendMessage('Yes, confirm and generate checkout link');
+    const targetItems = action.items && action.items.length > 0 ? action.items : cart;
+    const subtotal = targetItems.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
+    const effectiveDiscount = appliedDiscount > 0 ? appliedDiscount : 3;
+    const discount = Math.round(subtotal * (effectiveDiscount / 100));
+    const tax = Math.round((subtotal - discount) * 0.18);
+    const total = action.amount || (subtotal - discount + tax);
+
+    const orderId = `ord_live_${Date.now().toString(36)}`;
+    const currentEpoch = Math.floor(Date.now() / 1000);
+    const expireByEpoch = currentEpoch + 300; // strictly 5 minutes (300 seconds)
+
+    // Stage 1: Ephemerally Locked Order (status: 'created', NOT 'paid')
+    const ephemeralOrder: PaymentOrder = {
+      orderId,
+      razorpayPaymentLinkId: `plink_${Date.now().toString(36)}`,
+      razorpayShortUrl: `https://rzp.io/i/${Date.now().toString(36)}`,
+      qrCodeData: `upi://pay?pa=veluno@razorpay&pn=VelunoTech&am=${total}&cu=INR`,
+      items: targetItems,
+      subtotal,
+      discountAmount: discount,
+      tax,
+      totalAmount: total,
+      amountInPaise: total * 100,
+      currency: 'INR',
+      customerEmail: user.email,
+      customerName: user.name,
+      status: 'pending_payment',
+      createdAt: new Date().toISOString(),
+      expireByTimestamp: expireByEpoch,
+      expiresAt: new Date(expireByEpoch * 1000).toISOString(),
+      ttlSeconds: 300,
+      countdownSeconds: 300,
+      receiptNumber: `REC-${Date.now().toString().slice(-6)}`
+    };
+
+    // Tool call telemetry for Stage 1: generate_payment (state = 'pending_payment')
+    const genPaymentToolCall: ToolCallEvent = {
+      id: `tool_${Date.now()}_gen_pay`,
+      name: 'generate_payment',
+      input: {
+        customer_email: user.email,
+        amount_inr: total,
+        amount_paise: total * 100,
+        currency: 'INR',
+        item_count: targetItems.length,
+        discount_concession: `${effectiveDiscount}%`,
+        expire_by: expireByEpoch,
+        ephemeral_gateway_lock: '5_MINUTES'
+      },
+      output: {
+        orderId,
+        razorpayPaymentLinkId: ephemeralOrder.razorpayPaymentLinkId,
+        razorpayShortUrl: ephemeralOrder.razorpayShortUrl,
+        amount: total,
+        state: 'pending_payment',
+        status: 'pending_payment',
+        countdown_seconds: 300,
+        ephemeral_lock: 'STRICT_5_MINUTE_CRYPTO_LOCK'
+      },
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      executionGatePassed: true,
+      securityNote: 'Human-in-the-loop gate approved. 5-minute ephemeral cryptographic lock active.'
+    };
+
+    setToolCallsHistory((prev) => [...prev, genPaymentToolCall]);
+    setActivePaymentOrder(ephemeralOrder);
+
+    // Ephemeral Urgency Script Message
+    const urgencyMessage: Message = {
+      id: `msg_stage1_${Date.now()}`,
+      sender: 'agent',
+      content: `🔒 **Strict 5-Minute Cryptographic Gateway Lock Active**:\nThis Razorpay secure link and your ${effectiveDiscount}% concession lock will expire in exactly 5 minutes (05:00 countdown). Use this ephemeral window to finalize your order before the cryptographic allocation locks out. Click **Complete Secure Checkout** below to authorize payment:`,
+      timestamp: new Date().toISOString(),
+      toolCalls: [genPaymentToolCall],
+      paymentOrder: ephemeralOrder,
+      quickReplies: ['Complete Secure Checkout', 'Simulate Bank Card Failure', 'View Invoice Receipt']
+    };
+
+    setMessages((prev) => {
+      // Clear confirmation gating on previous message so the gate button disappears cleanly
+      const updated = prev.map((m) => m.confirmationGated ? { ...m, confirmationGated: false } : m);
+      return [...updated, urgencyMessage];
+    });
   };
 
   // Cart Operations
+
+  const handleAddBundleToCart = (products: Product[]) => {
+    setCart((prev) => {
+      let newCart = [...prev];
+      products.forEach(product => {
+        const existing = newCart.find(i => i.product.id === product.id);
+        if (existing) {
+          newCart = newCart.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        } else {
+          newCart.push({ product, quantity: 1 });
+        }
+      });
+      return newCart;
+    });
+    
+    // Simulate calculate_cart tool trace
+    setToolCallsHistory(prev => [
+      ...prev,
+      {
+        id: `call_${Date.now()}`,
+        name: 'calculate_cart',
+        arguments: { action: 'ADD_BUNDLE', count: products.length },
+        input: { action: 'ADD_BUNDLE', count: products.length },
+        output: { success: true, count: products.length },
+        status: 'success',
+        timestamp: new Date().toISOString()
+      }
+    ]);
+    
+    // Provide system confirmation
+    const confirmMsg: Message = {
+      id: `msg_sys_${Date.now()}`,
+      sender: 'system',
+      content: `Workspace Bundle added to cart successfully (${products.length} items).`,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, confirmMsg]);
+    
+    // Switch to cart tab
+    setAgentSidebarTab('cart');
+  };
+
   const handleAddToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
@@ -316,10 +601,11 @@ export function App() {
     handleSendMessage(scenario.initialPrompt);
   };
 
-  // Payment Link & Modal Handlers
+  // Payment Action Handler: Triggers the actual Razorpay Gateway Modal
   const handleOpenPaymentModal = (order: PaymentOrder) => {
     setActivePaymentOrder(order);
-    setIsPaymentModalOpen(true);
+    setRazorpayOrder(order);
+    setIsRazorpayModalOpen(true);
   };
 
   const handlePaymentSuccess = (
@@ -337,6 +623,36 @@ export function App() {
 
     setActivePaymentOrder(updated);
 
+    // Log transaction payload to Live Audit Panel
+    const auditRecord: ToolCallEvent = {
+      id: `tc_tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: 'generate_payment',
+      input: {
+        orderId: order.orderId,
+        amount: order.totalAmount,
+        currency: order.currency,
+        itemsCount: order.items.length,
+        customerEmail: order.customerEmail,
+        customerName: order.customerName || 'Valentinine Customer',
+        channel: 'NATIVE_INLINE_CHECKOUT'
+      },
+      output: {
+        transactionId: txnId,
+        status: 'CAPTURED',
+        paymentMethod: method,
+        amountSettled: order.totalAmount,
+        deliveryStatus: 'PRIORITY_DISPATCH_UNLOCKED',
+        gatewayAuthToken: `auth_tok_${Date.now().toString(36)}`
+      },
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      executionTimeMs: 45,
+      executionGatePassed: true,
+      securityNote: 'Native inline cryptographic checkout captured. Zero external popup or options leakage.'
+    };
+
+    setToolCallsHistory((prev) => [auditRecord, ...prev]);
+
     // Save to user orders history
     setUser((prev) => {
       const existingIndex = prev.orders.findIndex((o) => o.orderId === order.orderId);
@@ -350,7 +666,7 @@ export function App() {
 
     // Post agent confirmation message in chat
     const successMsg: Message = {
-      id: `msg_paid_${Date.now()}`,
+      id: `msg_paid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
       content: `🎉 **Payment Verified via Razorpay!**\n\nThank you! We received your payment of **₹${order.totalAmount.toLocaleString('en-IN')}** via **${method.toUpperCase()}** (Txn ID: \`${txnId}\`).\n\nYour order has been queued for immediate priority fulfillment. A copy of the tax invoice has been generated for your records.`,
       timestamp: new Date().toISOString(),
@@ -358,7 +674,18 @@ export function App() {
       quickReplies: ['View Tax Invoice', 'Shop More Tech Gear', 'Return to Storefront']
     };
 
-    setMessages((prev) => [...prev, successMsg]);
+    setMessages((prev) => {
+      const updatedMessages = prev.map((msg) => {
+        if (msg.paymentOrder?.orderId === order.orderId) {
+          return { ...msg, paymentOrder: updated, confirmationGated: false };
+        }
+        if (msg.confirmationGated) {
+          return { ...msg, confirmationGated: false };
+        }
+        return msg;
+      });
+      return [...updatedMessages, successMsg];
+    });
   };
 
   const handlePaymentFailed = (order: PaymentOrder, reason: string) => {
@@ -376,6 +703,12 @@ export function App() {
 
   const handleSimulateFailure = (order: PaymentOrder) => {
     handlePaymentFailed(order, 'BANK_DECLINED_ISSUER_TIMEOUT');
+  };
+
+  const handleRequestNewLink = (order: PaymentOrder) => {
+    setIsAgentSidebarOpen(true);
+    setAgentSidebarTab('chat');
+    handleSendMessage(`The 5-minute payment link for order ${order.orderId} has expired. Please generate a fresh payment link with the 5-minute cryptographic lock.`);
   };
 
   const handleResetSession = () => {
@@ -397,7 +730,7 @@ export function App() {
     });
     setMessages([
       {
-        id: `msg_reset_${Date.now()}`,
+        id: `msg_reset_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         sender: 'agent',
         content: `Session refreshed! I am **Veluno Concierge**, ready to assist with product discovery, zero-trust cart validation, and Razorpay checkout. How can I help?`,
         timestamp: new Date().toISOString(),
@@ -604,6 +937,12 @@ export function App() {
         toolCallsHistory={toolCallsHistory}
         activePaymentOrder={activePaymentOrder}
         pendingGatedAction={pendingGatedAction}
+        isA2AMode={isA2AMode}
+        isA2ATyping={isA2ATyping}
+        onToggleA2A={handleToggleA2A}
+        onNextA2ATurn={handleNextA2ATurn}
+        
+        onAddBundleToCart={handleAddBundleToCart}
         onSendMessage={handleSendMessage}
         onGatedConfirm={handleGatedActionConfirm}
         onOpenProductDetail={(prod) => setSelectedProductDetail(prod)}
@@ -617,6 +956,8 @@ export function App() {
         onSelectScenario={handleSelectScenario}
         onOpenToolsModal={() => setIsToolsModalOpen(true)}
         onResetSession={handleResetSession}
+        onRequestNewLink={handleRequestNewLink}
+        onPaymentSuccess={handlePaymentSuccess}
       />
 
       {/* Modals & Overlays */}
@@ -640,18 +981,25 @@ export function App() {
         }}
       />
 
-      <PaymentModal
-        order={activePaymentOrder}
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onPaymentSuccess={handlePaymentSuccess}
-        onPaymentFailed={handlePaymentFailed}
-      />
-
       <InvoiceModal
         order={selectedInvoiceOrder}
         isOpen={Boolean(selectedInvoiceOrder)}
         onClose={() => setSelectedInvoiceOrder(null)}
+      />
+
+      {/* Razorpay Gateway Modal */}
+      <RazorpayModal
+        isOpen={isRazorpayModalOpen}
+        order={razorpayOrder}
+        onClose={() => setIsRazorpayModalOpen(false)}
+        onSuccess={(order, method, txnId) => {
+          setIsRazorpayModalOpen(false);
+          handlePaymentSuccess(order, method, txnId);
+        }}
+        onFailure={(order, reason) => {
+          setIsRazorpayModalOpen(false);
+          handlePaymentFailed(order, reason);
+        }}
       />
 
       {/* User Session Modals */}

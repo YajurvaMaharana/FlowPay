@@ -1,239 +1,459 @@
 import React, { useState, useEffect } from 'react';
 import { PaymentOrder } from '../types';
-import { QRCodeSVG } from 'qrcode.react';
-import { ExternalLink, Copy, Check, ShieldCheck, CreditCard, QrCode, AlertCircle, ArrowRight, Zap, RefreshCw, Clock, Coins } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { 
+  ShieldCheck, ArrowRight, RefreshCw, Clock, Lock, 
+  CheckCircle2, AlertCircle, FileText, Truck, MapPin, Sparkles
+} from 'lucide-react';
+
+export type CheckoutState = 'pending_payment' | 'success' | 'expired' | 'failed';
 
 interface PaymentLinkCardProps {
   order: PaymentOrder;
-  onOpenPaymentModal: (order: PaymentOrder) => void;
-  onSimulateFailure: (order: PaymentOrder) => void;
+  onOpenPaymentModal?: (order: PaymentOrder) => void;
+  onSimulateFailure?: (order: PaymentOrder) => void;
   onOpenInvoice?: (order: PaymentOrder) => void;
+  onRequestNewLink?: (order: PaymentOrder) => void;
+  onPaymentSuccess?: (order: PaymentOrder, method: 'upi' | 'card' | 'netbanking' | 'wallet', txnId: string) => void;
 }
 
 export const PaymentLinkCard: React.FC<PaymentLinkCardProps> = ({
   order,
   onOpenPaymentModal,
   onSimulateFailure,
-  onOpenInvoice
+  onOpenInvoice,
+  onRequestNewLink,
+  onPaymentSuccess
 }) => {
-  const [copied, setCopied] = useState(false);
-  const [showQr, setShowQr] = useState(false);
-  
-  // 15-minute countdown timer for link expiry
-  const [timeLeft, setTimeLeft] = useState<number>(() => {
-    if (order.expiresAt) {
-      const remaining = Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - Date.now()) / 1000));
-      return remaining > 0 ? remaining : 900;
-    }
-    return 900; // 15 minutes = 900 seconds
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(order.razorpayShortUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Explicit two-stage checkout state machine
+  // Stage 1: 'pending_payment' (Initial State on generate_payment)
+  // Stage 2: 'success' (Trigger State on Click of "Complete Secure Checkout")
+  const determineInitialState = (): CheckoutState => {
+    if (order.status === 'paid' || order.status === 'success') return 'success';
+    if (order.status === 'failed') return 'failed';
+    return 'pending_payment';
   };
 
-  const isPaid = order.status === 'paid';
-  const isFailed = order.status === 'failed';
-  const amountPaise = order.amountInPaise || Math.round(order.totalAmount * 100);
+  const [checkoutState, setCheckoutState] = useState<CheckoutState>(determineInitialState);
+  const [localTxnId, setLocalTxnId] = useState<string>(order.transactionId || '');
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+
+  // Sync state if order prop updates externally
+  useEffect(() => {
+    if (order.status === 'paid' || order.status === 'success') {
+      setCheckoutState('success');
+      if (order.transactionId) setLocalTxnId(order.transactionId);
+    } else if (order.status === 'failed') {
+      setCheckoutState('failed');
+    } else {
+      setCheckoutState('pending_payment');
+    }
+  }, [order.status, order.transactionId]);
+
+  // Calculate remaining seconds based on order expiration timestamp or 5 minutes (300s) default
+  const calculateRemainingSeconds = () => {
+    if (order.expireByTimestamp) {
+      return Math.max(0, Math.floor(order.expireByTimestamp - Date.now() / 1000));
+    }
+    if (order.expiresAt) {
+      return Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - Date.now()) / 1000));
+    }
+    return 300; // 5 minutes ephemeral lock
+  };
+
+  const [timeLeft, setTimeLeft] = useState<number>(calculateRemainingSeconds);
+
+  useEffect(() => {
+    setTimeLeft(calculateRemainingSeconds());
+
+    const timer = setInterval(() => {
+      setTimeLeft(calculateRemainingSeconds());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [order.expiresAt, order.expireByTimestamp]);
+
+  const isExpired = checkoutState !== 'success' && timeLeft <= 0;
 
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  /**
+   * Stage 2 Trigger State on Click (`state = 'success'`):
+   * Only when the user explicitly clicks the "Complete Secure Checkout" button
+   * do we update the state to success.
+   * Smoothly transitions to the green "Payment Successful" card with transaction ID,
+   * order delivery view, and updated Live Audit telemetry logs.
+   */
+  const handlePaySecurely = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isExpired) {
+      if (onRequestNewLink) {
+        onRequestNewLink(order);
+      }
+      return;
+    }
+
+    if (checkoutState === 'success') {
+      if (onOpenInvoice) {
+        onOpenInvoice(order);
+      }
+      return;
+    }
+
+    // 1. Trigger the actual Razorpay gateway modal
+    if (onOpenPaymentModal) {
+      onOpenPaymentModal(order);
+      return;
+    }
+
+    // 2. Fallback: Clean pending-to-success transition without jumping straight on render
+    setIsAuthorizing(true);
+    const generatedTxnId = order.transactionId || `pay_rzp_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    setLocalTxnId(generatedTxnId);
+
+    setTimeout(() => {
+      setCheckoutState('success');
+      setIsAuthorizing(false);
+
+      // Celebratory visual feedback
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#0c83fd', '#10B981', '#F59E0B', '#FFFFFF']
+        });
+      } catch {
+        // safe fallback
+      }
+
+      if (onPaymentSuccess) {
+        onPaymentSuccess(order, 'upi', generatedTxnId);
+      }
+    }, 400);
+  };
+
+  const trackingNumber = `VEL-EXP-${order.orderId.replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase()}`;
+
   return (
-    <div id={`payment-card-${order.orderId}`} className="my-3 rounded-2xl border border-neutral-500/40 bg-gradient-to-br from-neutral-900 via-neutral-950/30 to-neutral-900 overflow-hidden shadow-2xl">
-      {/* Razorpay Brand Header */}
-      <div className="px-4 py-3 bg-neutral-900/95 border-b border-neutral-500/30 flex items-center justify-between flex-wrap gap-2">
+    <div 
+      id={`payment-card-${order.orderId}`}
+      className="my-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 shadow-2xl overflow-hidden transition-all text-neutral-100 max-w-xl mx-auto"
+    >
+      {/* Card Header: Security status & 5-minute ephemeral countdown */}
+      <div className="px-5 py-3.5 bg-neutral-900/90 border-b border-neutral-800/80 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-xl bg-neutral-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-neutral-900/50">
+          <div className="w-8 h-8 rounded-xl bg-neutral-800 border border-neutral-700/60 flex items-center justify-center text-white font-bold text-sm shadow-inner shrink-0">
             ₹
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-display font-bold text-sm text-neutral-100">Razorpay Smart Link</span>
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-950/70 border border-green-500/40 text-[10px] text-green-300 font-medium">
+              <span className="font-display font-bold text-sm tracking-tight text-white">Veluno Secure Checkout</span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-[10px] text-emerald-300 font-mono font-medium">
                 <ShieldCheck className="w-2.5 h-2.5" /> 256-Bit Encrypted
               </span>
             </div>
-            <p className="text-[10px] text-neutral-400 font-mono">Order ID: {order.orderId} • Link: {order.razorpayPaymentLinkId}</p>
+            <p className="text-[11px] text-neutral-400 font-mono">Order #{order.orderId}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Expiry Timer Badge */}
-          {!isPaid && (
-            <div className={`px-2 py-0.5 rounded-lg border text-[11px] font-mono flex items-center gap-1 ${
-              timeLeft < 180 
-                ? 'bg-red-950/60 border-red-700/50 text-red-300 animate-pulse' 
-                : 'bg-neutral-950/80 border-neutral-700 text-amber-300'
-            }`}>
-              <Clock className="w-3 h-3" />
-              <span>Expires in {formatCountdown(timeLeft)}</span>
+        {/* Ephemeral Countdown Timer Badge / Status Badge */}
+        <div>
+          {checkoutState === 'success' ? (
+            <div 
+              id={`status-badge-success-${order.orderId}`}
+              data-state="success"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/90 border border-emerald-800 text-emerald-300 text-xs font-mono font-semibold animate-fadeIn"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Payment Successful</span>
             </div>
-          )}
-
-          {isPaid ? (
-            <span className="px-2.5 py-1 rounded-full bg-green-500/20 border border-green-500/40 text-green-300 text-xs font-semibold flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" /> PAID
-            </span>
-          ) : isFailed ? (
-            <span className="px-2.5 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-semibold flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" /> FAILED
-            </span>
+          ) : isExpired ? (
+            <div 
+              id={`urgency-badge-expired-${order.orderId}`}
+              data-state="expired"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-950/90 border border-red-800 text-red-300 text-xs font-mono font-bold"
+            >
+              <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+              <span>Expired (00:00)</span>
+            </div>
           ) : (
-            <span className="px-2.5 py-1 rounded-full bg-neutral-500/20 border border-neutral-500/40 text-neutral-300 text-xs font-semibold flex items-center gap-1 animate-pulse">
-              <Zap className="w-3 h-3" /> ACTIVE LINK
-            </span>
+            <div 
+              id={`urgency-badge-${order.orderId}`}
+              data-state="pending_payment"
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-semibold shadow-sm transition-colors animate-pulse ${
+                timeLeft <= 120 
+                  ? 'bg-red-950/90 border-red-600/90 text-red-200' 
+                  : 'bg-amber-950/90 border-amber-600/80 text-amber-300'
+              }`}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  timeLeft <= 120 ? 'bg-red-400' : 'bg-amber-400'
+                }`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  timeLeft <= 120 ? 'bg-red-500' : 'bg-amber-500'
+                }`}></span>
+              </span>
+              <Clock className={`w-3 h-3 shrink-0 ${timeLeft <= 120 ? 'text-red-300' : 'text-amber-300'}`} />
+              <span>{formatCountdown(timeLeft)} remaining</span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Main Payment Details */}
-      <div className="p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-950/80 p-3.5 rounded-xl border border-neutral-800/90">
-          <div>
+      {/* Card Content Body */}
+      <div className="p-5 space-y-4">
+        
+        {/* Expired Session Notice if timed out */}
+        {isExpired && (
+          <div className="p-3 rounded-xl bg-red-950/50 border border-red-800/60 text-red-200 flex items-center justify-between gap-3 text-xs animate-fadeIn">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-400">Total Payable</span>
-              {/* Paise breakdown badge */}
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-neutral-950/70 border border-neutral-700/40 text-[10px] text-neutral-300 font-mono">
-                <Coins className="w-2.5 h-2.5 text-neutral-400" />
-                {amountPaise.toLocaleString('en-IN')} Paise
-              </span>
+              <Clock className="w-4 h-4 text-red-400 shrink-0" />
+              <span>5-minute ephemeral checkout expired. Click to renew order allocation.</span>
             </div>
-            <div className="text-2xl font-bold font-display text-white flex items-baseline gap-1 mt-0.5">
-              <span>₹{order.totalAmount.toLocaleString('en-IN')}</span>
-              <span className="text-xs font-normal text-neutral-400">({order.currency})</span>
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5">
-              Includes 18% GST • Free Priority Shipping
-            </div>
-          </div>
-
-          <div className="flex flex-wrap sm:flex-col gap-2">
-            <button
-              id={`btn-open-razorpay-${order.orderId}`}
-              onClick={() => onOpenPaymentModal(order)}
-              disabled={isPaid}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
-                isPaid
-                  ? 'bg-neutral-800 text-neutral-400 cursor-not-allowed'
-                  : 'bg-neutral-600 hover:bg-neutral-500 text-white shadow-neutral-900/50 hover:scale-[1.02] active:scale-95'
-              }`}
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>{isPaid ? 'Payment Received' : 'Pay via Razorpay'}</span>
-              {!isPaid && <ArrowRight className="w-3.5 h-3.5" />}
-            </button>
-
-            {isPaid && onOpenInvoice && (
+            {onRequestNewLink && (
               <button
-                id={`btn-view-invoice-${order.orderId}`}
-                onClick={() => onOpenInvoice(order)}
-                className="px-4 py-2 rounded-xl font-semibold text-xs bg-green-950/60 hover:bg-green-900/80 text-green-300 border border-green-700/50 flex items-center justify-center gap-1.5 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRequestNewLink(order);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-red-900 hover:bg-red-800 text-white font-semibold text-xs shrink-0 flex items-center gap-1 border border-red-700 transition-colors"
               >
-                <span>View Tax Invoice</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <RefreshCw className="w-3 h-3" />
+                <span>Renew</span>
               </button>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Items Summary in Payment Link */}
-        <div className="space-y-1.5 text-xs">
-          <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Cart Line Items</div>
-          <div className="divide-y divide-neutral-800/60 bg-neutral-950/50 rounded-xl p-2 border border-neutral-800/50">
+        {/* Clean Order Breakdown */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-neutral-400 uppercase tracking-wider font-mono">
+            <span>Order Items</span>
+            <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} Items</span>
+          </div>
+
+          <div className="rounded-xl bg-neutral-900/60 border border-neutral-800/80 divide-y divide-neutral-800/60 overflow-hidden">
             {order.items.map((item, idx) => (
-              <div key={idx} className="py-1.5 px-2 flex items-center justify-between text-neutral-300">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-neutral-800 text-neutral-400 text-[10px] flex items-center justify-center font-bold">
-                    {item.quantity}x
-                  </span>
-                  <span className="truncate max-w-[180px] sm:max-w-[240px]">{item.product.name}</span>
+              <div key={idx} className="p-3 flex items-center justify-between gap-3 text-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  {item.product.image && (
+                    <img 
+                      src={item.product.image} 
+                      alt={item.product.name}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-lg object-cover bg-neutral-800 shrink-0 border border-neutral-700/60"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-medium text-white truncate text-sm">{item.product.name}</p>
+                    <p className="text-xs text-neutral-400 font-mono">
+                      Qty: {item.quantity} × ₹{item.product.price.toLocaleString('en-IN')}
+                    </p>
+                  </div>
                 </div>
-                <span className="font-semibold text-neutral-200">
+                <div className="font-mono font-semibold text-neutral-200 shrink-0">
                   ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
-                </span>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Razorpay Short URL & UPI QR Switcher */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-neutral-400">Direct Checkout URL:</span>
-            <button
-              id={`btn-toggle-qr-${order.orderId}`}
-              onClick={() => setShowQr(!showQr)}
-              className="text-neutral-400 hover:text-neutral-300 font-medium flex items-center gap-1 text-[11px] transition-colors"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>{showQr ? 'Hide UPI QR' : 'Show UPI QR Code'}</span>
-            </button>
+        {/* Financial Breakdown Table */}
+        <div className="p-4 rounded-xl bg-neutral-900/40 border border-neutral-800/60 space-y-2 text-xs font-mono">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span>Subtotal</span>
+            <span className="text-neutral-200">₹{order.subtotal.toLocaleString('en-IN')}</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <a
-              id={`link-rzp-url-${order.orderId}`}
-              href={order.razorpayShortUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 px-3 py-2 rounded-lg bg-neutral-950 border border-neutral-800 hover:border-neutral-500/50 text-neutral-300 hover:text-neutral-200 font-mono text-xs truncate flex items-center justify-between group transition-colors"
-            >
-              <span className="truncate">{order.razorpayShortUrl}</span>
-              <ExternalLink className="w-3 h-3 text-neutral-500 group-hover:text-neutral-400 shrink-0 ml-1" />
-            </a>
-            <button
-              id={`btn-copy-razorpay-link-${order.orderId}`}
-              onClick={handleCopyLink}
-              className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs flex items-center gap-1.5 transition-colors shrink-0 font-medium"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
-            </button>
-          </div>
-
-          {showQr && (
-            <div className="p-4 bg-white rounded-xl flex flex-col items-center justify-center text-neutral-900 space-y-2 animate-fadeIn">
-              <QRCodeSVG
-                value={order.qrCodeData}
-                size={160}
-                level="H"
-                includeMargin={true}
-              />
-              <div className="text-center">
-                <p className="font-bold text-xs">Scan with any UPI App</p>
-                <p className="text-[10px] text-neutral-600">Google Pay • PhonePe • Paytm • CRED • BHIM</p>
-              </div>
+          {order.discountAmount > 0 && (
+            <div className="flex items-center justify-between text-emerald-400 font-semibold">
+              <span>Authorized Agent Discount</span>
+              <span>-₹{order.discountAmount.toLocaleString('en-IN')}</span>
             </div>
           )}
+
+          <div className="flex items-center justify-between text-neutral-400">
+            <span>Estimated GST (18%)</span>
+            <span className="text-neutral-200">
+              {order.tax > 0 ? `₹${order.tax.toLocaleString('en-IN')}` : 'Included in Total'}
+            </span>
+          </div>
+
+          <div className="pt-2.5 border-t border-neutral-800 flex items-baseline justify-between">
+            <div>
+              <span className="font-sans font-bold text-sm text-white">Final Calculated Amount</span>
+              <span className="text-[10px] text-neutral-400 block font-sans">Net payable (all taxes included)</span>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-bold font-display text-white tracking-tight">
+                ₹{order.totalAmount.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[11px] text-neutral-400 ml-1 font-mono">{order.currency}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Quick Testing Actions (Simulator Tooling) */}
-        {!isPaid && (
-          <div className="pt-2 border-t border-neutral-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-            <span className="text-neutral-500 font-medium">Testing & Recovery:</span>
+        {/* Stage 2 ONLY: Paid Confirmation & Unlocked Final Delivery View */}
+        {checkoutState === 'success' ? (
+          <div id={`checkout-success-view-${order.orderId}`} data-state="success" className="space-y-4 pt-1 animate-fadeIn">
+            {/* Confirmation Checkmark Banner */}
+            <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-600/70 flex items-center gap-3.5 shadow-lg shadow-emerald-950/40">
+              <div className="w-11 h-11 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400 animate-scaleUp" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-base font-bold text-white flex items-center gap-1.5">
+                  <span>Payment Successful</span>
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                </h4>
+                <p className="text-xs text-emerald-300 font-mono truncate">
+                  Txn ID: {localTxnId || order.transactionId || 'pay_inline_verified'} • Verified & Settled
+                </p>
+              </div>
+            </div>
+
+            {/* Unlocked Final Delivery View */}
+            <div className="p-4 rounded-xl bg-neutral-900/80 border border-neutral-800 space-y-3.5 shadow-md">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <Truck className="w-4 h-4 text-emerald-400" />
+                  <span>Order Delivery View</span>
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 text-[10px] font-mono font-medium">
+                  Priority Dispatch Unlocked
+                </span>
+              </div>
+
+              {/* Delivery Metadata */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                <div className="p-2.5 rounded-lg bg-neutral-950 border border-neutral-800/80">
+                  <span className="text-neutral-500 text-[10px] block uppercase">Estimated Delivery</span>
+                  <span className="text-white font-semibold">Tomorrow, by 1:00 PM</span>
+                  <span className="text-[10px] text-emerald-400 block">Express Air Priority</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-neutral-950 border border-neutral-800/80">
+                  <span className="text-neutral-500 text-[10px] block uppercase">Consignment Tracking</span>
+                  <span className="text-emerald-400 font-semibold">{trackingNumber}</span>
+                  <span className="text-[10px] text-neutral-400 block">Veluno Direct Fleet</span>
+                </div>
+              </div>
+
+              {/* Stepper Status Tracking */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                  <span className="text-emerald-400 font-semibold">✓ Order Confirmed</span>
+                  <span className="text-emerald-300 font-medium">● Warehouse Allocation</span>
+                  <span className="text-neutral-500">○ Express Transit</span>
+                  <span className="text-neutral-500">○ Out for Delivery</span>
+                </div>
+                <div className="w-full bg-neutral-800 h-2 rounded-full overflow-hidden flex">
+                  <div className="bg-emerald-500 h-full w-1/2 rounded-full transition-all duration-500"></div>
+                </div>
+              </div>
+
+              {/* Shipping Destination */}
+              <div className="flex items-center gap-2 pt-1 text-xs text-neutral-400 border-t border-neutral-800/80">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="truncate">Shipping to: {order.customerEmail} • Priority Air Hub</span>
+              </div>
+
+              {/* Invoice Action */}
+              {onOpenInvoice && (
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onOpenInvoice(order);
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-750 text-neutral-200 hover:text-white border border-neutral-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>View Tax Invoice</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Stage 1: Single Prominent, High-Contrast Action Button: "Complete Secure Checkout" */
+          <div className="space-y-2 pt-1" data-state="pending_payment">
             <button
-              id={`btn-simulate-fail-${order.orderId}`}
-              onClick={() => onSimulateFailure(order)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-950/50 hover:bg-red-900/70 text-red-300 border border-red-800/50 font-medium transition-colors"
+              type="button"
+              id={`btn-complete-secure-checkout-${order.orderId}`}
+              data-testid="btn-complete-secure-checkout"
+              onClick={handlePaySecurely}
+              disabled={isExpired || isAuthorizing}
+              className={`w-full py-3.5 px-5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99] ${
+                isExpired
+                  ? 'bg-neutral-900 text-neutral-500 border border-neutral-800 cursor-not-allowed opacity-70'
+                  : 'bg-white hover:bg-neutral-100 text-black shadow-white/10 hover:shadow-white/20 cursor-pointer'
+              }`}
             >
-              <RefreshCw className="w-3 h-3" />
-              <span>Simulate Bank Decline (Test Graceful Recovery)</span>
+              {isExpired ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-neutral-500" />
+                  <span>Expired — Request New Link</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-black" />
+                  <span>Complete Secure Checkout</span>
+                  <ArrowRight className="w-4 h-4 text-black ml-0.5" />
+                </>
+              )}
             </button>
+
+            {/* When expired, provide clear clickable action to renew the link */}
+            {isExpired && onRequestNewLink && (
+              <div className="flex items-center justify-center pt-1.5">
+                <button
+                  type="button"
+                  id={`btn-request-new-link-${order.orderId}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onRequestNewLink(order);
+                  }}
+                  className="text-red-400 hover:text-red-300 text-xs font-semibold flex items-center gap-1.5 hover:underline transition-colors cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Click to generate a fresh 5-minute link</span>
+                </button>
+              </div>
+            )}
+
+            {/* Subtle Failure Recovery Simulator for testing */}
+            {onSimulateFailure && !isExpired && (
+              <div className="flex items-center justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSimulateFailure(order);
+                  }}
+                  className="text-neutral-500 hover:text-neutral-400 text-[11px] font-mono hover:underline transition-colors"
+                >
+                  Test Decline Recovery
+                </button>
+              </div>
+            )}
           </div>
         )}
+
       </div>
     </div>
   );

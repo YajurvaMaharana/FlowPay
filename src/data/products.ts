@@ -225,8 +225,8 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'prod_lumina_monitor',
-    name: 'Lumina Curve 34" WQHD 165Hz Studio Monitor',
-    tagline: '1000R Curved IPS Quantum Dot Display with 90W USB-C PD',
+    name: 'Lumina 34" 4K HDR Monitor',
+    tagline: '1000R Ultrawide Curved Display with 165Hz & 90W USB-C PD',
     category: 'computing',
     price: 38999,
     originalPrice: 46999,
@@ -236,7 +236,7 @@ export const PRODUCTS: Product[] = [
     inStock: true,
     stockCount: 14,
     image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80',
-    description: 'Ultrawide 21:9 WQHD 3440x1440 resolution, 98% DCI-P3 color gamut, factory color calibrated Delta E < 1.5, and single-cable 90W USB-C docking.',
+    description: 'Ultrawide 21:9 WQHD/4K HDR 3440x1440 resolution, 98% DCI-P3 color gamut, factory color calibrated Delta E < 1.5, and single-cable 90W USB-C docking.',
     features: [
       '34-inch 1000R immersive curved panel',
       '98% DCI-P3 / 100% sRGB Color Accuracy',
@@ -244,7 +244,7 @@ export const PRODUCTS: Product[] = [
       'Integrated KVM Switch for multiple laptops'
     ],
     specs: {
-      'Resolution': '3440 x 1440 (WQHD 21:9)',
+      'Resolution': '3440 x 1440 (WQHD 21:9 / 4K HDR)',
       'Refresh Rate': '165Hz with AMD FreeSync Premium',
       'Brightness': '450 nits HDR400',
       'Ports': '1x USB-C (90W PD), 2x HDMI 2.1, 1x DP 1.4, 4x USB-A'
@@ -253,6 +253,199 @@ export const PRODUCTS: Product[] = [
     crossSellReason: 'Pair with the DeskMat Pro Armor XXL to anchor your ultrawide workspace.',
     crossSellDiscount: 10,
     badge: 'Flagship Display',
-    tags: ['monitor', 'ultrawide', 'display', 'screen', 'lumina', 'computing', 'workspace']
+    tags: ['monitor', 'monitors', 'display', 'displays', 'screen', 'ultrawide', 'curved', '4k', 'hdr', 'lumina', 'computing', 'workspace']
+  },
+  {
+    id: 'prod_apexbook_pro16',
+    name: 'ApexBook Pro 16"',
+    tagline: 'High-end Creator & Gaming Workstation with M3 Max & 120Hz Liquid Retina XDR',
+    category: 'computing',
+    price: 189999,
+    originalPrice: 219999,
+    currency: 'INR',
+    rating: 4.9,
+    reviewsCount: 384,
+    inStock: true,
+    stockCount: 18,
+    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&auto=format&fit=crop&q=80',
+    description: 'Precision-engineered aluminum powerhouse featuring 16-Core M3 Max with 40-core GPU, 48GB unified memory, 1TB PCIe 4.0 SSD, and 16.2-inch Liquid Retina XDR mini-LED display with 1600 nits peak brightness.',
+    features: [
+      '16-core CPU & 40-core GPU for extreme rendering and game development',
+      '16.2-inch Liquid Retina XDR mini-LED with 120Hz ProMotion',
+      '48GB Unified RAM with 400GB/s memory bandwidth',
+      'Up to 22 hours battery life with MagSafe 3 ultra-fast charging'
+    ],
+    specs: {
+      'Processor': 'Apple M3 Max (16-Core CPU, 40-Core GPU)',
+      'Memory': '48GB Unified Memory (400GB/s)',
+      'Storage': '1TB High-Speed NVMe Gen4 SSD',
+      'Display': '16.2" Mini-LED (3456x2234), 120Hz, 1600 nits HDR',
+      'Ports': '3x Thunderbolt 4 / USB-C, HDMI 2.1, SDXC slot, MagSafe 3',
+      'Weight': '2.14 kg'
+    },
+    crossSellProductId: 'prod_lumina_monitor',
+    crossSellReason: 'Dock into the Lumina 34" 4K Curved Display for a dual-screen studio powerhouse.',
+    crossSellDiscount: 10,
+    badge: 'Creator Flagship',
+    tags: ['laptop', 'laptops', 'notebook', 'creator', 'gaming', 'apexbook', 'macbook', 'workstation', 'computing', 'apex']
+  },
+  {
+    id: 'prod_novacore_ultra',
+    name: 'NovaCore Ultra 14"',
+    tagline: 'Ultra-thin AI Creator Laptop with 2.8K 120Hz OLED Display',
+    category: 'computing',
+    price: 134999,
+    originalPrice: 154999,
+    currency: 'INR',
+    rating: 4.8,
+    reviewsCount: 290,
+    inStock: true,
+    stockCount: 22,
+    image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&auto=format&fit=crop&q=80',
+    description: 'Sleek aerospace CNC magnesium alloy chassis weighing just 1.28kg. Powered by Intel Core Ultra 9 with on-die AI NPU acceleration, 32GB LPDDR5X, and a stunning 2.8K 120Hz OLED touchscreen.',
+    features: [
+      'Intel Core Ultra 9 with dedicated neural processing unit (NPU)',
+      '14.5" 2.8K (2880x1800) 120Hz OLED with 100% DCI-P3 color accuracy',
+      '32GB LPDDR5X 7467MHz memory + 1TB Gen4 NVMe SSD',
+      'Whisper-quiet vapor chamber cooling & 18-hour battery endurance'
+    ],
+    specs: {
+      'Processor': 'Intel Core Ultra 9 185H (16 Cores, 22 Threads, 5.1GHz)',
+      'NPU': 'Intel AI Boost NPU (34 TOPS total)',
+      'Memory': '32GB LPDDR5X 7467MHz',
+      'Storage': '1TB PCIe 4.0 M.2 NVMe SSD',
+      'Display': '14.5" OLED 2.8K 120Hz Touch (0.2ms response)',
+      'Weight': '1.28 kg Ultralight CNC Magnesium'
+    },
+    crossSellProductId: 'prod_laptop_stand',
+    crossSellReason: 'Pair with the ErgoElevate Aluminum Stand for perfect eye-level alignment.',
+    crossSellDiscount: 10,
+    badge: 'AI Ultrabook',
+    tags: ['laptop', 'laptops', 'novacore', 'ultra', 'notebook', 'ultrabook', 'ai', 'creator', 'portable', 'computing']
+  },
+  {
+    id: 'prod_velox_rig_4080',
+    name: 'Velox Custom Rig RTX 4080',
+    tagline: 'Custom Desktop Rig with Ryzen 9 7950X3D & Liquid-Cooled RTX 4080',
+    category: 'computing',
+    price: 249999,
+    originalPrice: 289999,
+    currency: 'INR',
+    rating: 5.0,
+    reviewsCount: 146,
+    inStock: true,
+    stockCount: 8,
+    image: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80',
+    description: 'Hand-crafted extreme gaming & AI workstation. Houses AMD Ryzen 9 7950X3D with 3D V-Cache, NVIDIA GeForce RTX 4080 16GB GDDR6X, 64GB DDR5 6000MHz RGB RAM, and 360mm AIO liquid cooling in a tempered dual-chamber case.',
+    features: [
+      'NVIDIA GeForce RTX 4080 16GB GDDR6X with DLSS 3 & Ray Tracing',
+      'AMD Ryzen 9 7950X3D 16-Core / 32-Thread with 128MB 3D V-Cache',
+      '64GB DDR5 6000MHz ultra-low latency dual-channel RAM',
+      'Custom 360mm AIO Liquid Cooling with programmable LCD pump display'
+    ],
+    specs: {
+      'Processor': 'AMD Ryzen 9 7950X3D (Up to 5.7GHz, 144MB Cache)',
+      'Graphics': 'NVIDIA GeForce RTX 4080 16GB GDDR6X Triple Fan',
+      'Memory': '64GB (2x32GB) DDR5 6000MHz Corsair Dominator RGB',
+      'Storage': '2TB PCIe Gen4 NVMe M.2 (7,400 MB/s)',
+      'Cooling': '360mm AIO Liquid Cooler + 6x ARGB PWM fans',
+      'Power Supply': '1000W 80+ Gold Fully Modular ATX 3.0'
+    },
+    crossSellProductId: 'prod_lumina_monitor',
+    crossSellReason: 'Unleash full 165Hz 4K frame rates on the Lumina 34" curved display.',
+    crossSellDiscount: 10,
+    badge: 'Ultimate Rig',
+    tags: ['pc', 'pcs', 'desktop', 'rig', 'prebuilt', 'gaming pc', 'workstation', 'computer', 'rtx 4080', 'velox', 'custom pc', 'computing']
+  },
+  {
+    id: 'prod_hyperdrive_2tb_ssd',
+    name: 'HyperDrive 2TB Gen4 SSD',
+    tagline: 'High-Speed NVMe M.2 SSD with 7,450 MB/s Sequential Read & Graphene Heat Shield',
+    category: 'computing',
+    price: 14999,
+    originalPrice: 18999,
+    currency: 'INR',
+    rating: 4.9,
+    reviewsCount: 520,
+    inStock: true,
+    stockCount: 42,
+    image: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=800&auto=format&fit=crop&q=80',
+    description: 'Flagship PCIe 4.0 x4 NVMe 1.4 M.2 2280 internal solid-state drive delivering blistering speeds up to 7,450 MB/s read and 6,900 MB/s write. Engineered with ultra-thin graphene thermal spreader for desktop rigs, laptops, and PS5.',
+    features: [
+      'Blistering PCIe Gen4 x4 transfer speeds up to 7,450 MB/s',
+      'Low-profile graphene copper heat spreader prevents thermal throttling',
+      '1,200 TBW endurance rating with 5-year hardware manufacturer warranty',
+      'Plug-and-play installation for PCs, gaming laptops, and Sony PS5'
+    ],
+    specs: {
+      'Capacity': '2TB (2,000 GB)',
+      'Form Factor': 'M.2 2280 NVMe',
+      'Interface': 'PCIe Gen 4.0 x4, NVMe 1.4',
+      'Seq. Read': 'Up to 7,450 MB/s',
+      'Seq. Write': 'Up to 6,900 MB/s',
+      'Endurance': '1,200 TBW / 1.5M Hours MTBF'
+    },
+    crossSellProductId: 'prod_velox_rig_4080',
+    crossSellReason: 'Double your high-speed storage in the Velox Custom Rig.',
+    crossSellDiscount: 10,
+    badge: 'Gen4 Speed',
+    tags: ['ssd', 'ssds', 'storage', 'nvme', 'm.2', 'drive', 'disk', 'hyperdrive', 'hard drive', 'gen4', 'computing']
+  }
+,
+  {
+    id: 'prod_laptop_stand',
+    name: 'ErgoElevate Aluminum Laptop Stand',
+    tagline: 'Adjustable Ergonomic Riser for MacBooks and Laptops',
+    category: 'workspace',
+    price: 3499,
+    originalPrice: 4999,
+    currency: 'INR',
+    rating: 4.8,
+    reviewsCount: 654,
+    inStock: true,
+    stockCount: 89,
+    image: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=800&auto=format&fit=crop&q=80',
+    description: 'Precision-machined from aerospace-grade aluminum. Dual-hinge design allows you to adjust both height and angle for the perfect ergonomic eye-level setup.',
+    features: [
+      'Dual-hinge height and angle adjustability',
+      'Ventilated backplate prevents laptop thermal throttling',
+      'Anti-slip silicone protective pads',
+      'Folds flat for portability'
+    ],
+    specs: {
+      'Material': 'Aviation Aluminum Alloy',
+      'Max Load': '10kg',
+      'Compatibility': '10" to 17" laptops',
+      'Weight': '850g'
+    },
+    tags: ['stand', 'laptop', 'ergonomic', 'workspace', 'aluminum']
+  },
+  {
+    id: 'prod_light_bar',
+    name: 'Lumina ScreenBar Pro',
+    tagline: 'Asymmetrical Desk Lamp for Eye Comfort',
+    category: 'workspace',
+    price: 4999,
+    originalPrice: 5999,
+    currency: 'INR',
+    rating: 4.9,
+    reviewsCount: 312,
+    inStock: true,
+    stockCount: 45,
+    image: 'https://images.unsplash.com/photo-1588612502693-01bd0cb36a7e?w=800&auto=format&fit=crop&q=80',
+    description: 'Asymmetrical optical design illuminates only your desk and keyboard, avoiding screen glare and reducing eye strain during long hours of work.',
+    features: [
+      'Zero screen glare optical design',
+      'Auto-dimming ambient light sensor',
+      'Adjustable color temperature (2700K - 6500K)',
+      'Touch controls and USB-powered'
+    ],
+    specs: {
+      'Illuminance': '1000 Lux',
+      'Power': '5W (USB-C)',
+      'Color Temp': '2700K - 6500K',
+      'Mount': 'Weighted gravity clip'
+    },
+    tags: ['light', 'lamp', 'desk', 'workspace', 'ergonomic']
   }
 ];

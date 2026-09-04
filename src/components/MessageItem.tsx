@@ -1,33 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Message, PaymentOrder, Product } from '../types';
 import { ToolCallBadge } from './ToolCallBadge';
 import { PaymentLinkCard } from './PaymentLinkCard';
+import confetti from 'canvas-confetti';
 import { 
   Bot, User, ShieldAlert, Sparkles, ShieldCheck, ArrowRight, 
-  Plus, Check, EyeOff, AlertTriangle, ShoppingCart, Info, RotateCcw 
+  Plus, Check, EyeOff, AlertTriangle, ShoppingCart, Info, RotateCcw, Loader2,
+  CheckCircle2, Truck, MapPin, FileText
 } from 'lucide-react';
 
 interface MessageItemProps {
   message: Message;
+  isWaitingForNextTurn?: boolean;
+  nextTurnCountdown?: number | null;
   onQuickReplyClick: (reply: string) => void;
-  onGatedActionConfirm: (action: NonNullable<Message['gatedAction']>) => void;
+  onGatedActionConfirm: (action: NonNullable<Message['gatedAction']>, event?: React.MouseEvent) => void;
   onOpenProductDetail: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onOpenPaymentModal: (order: PaymentOrder) => void;
   onSimulateFailure: (order: PaymentOrder) => void;
   onOpenInvoice?: (order: PaymentOrder) => void;
+  onAddBundleToCart?: (products: Product[]) => void;
+  onRequestNewLink?: (order: PaymentOrder) => void;
+  onPaymentSuccess?: (order: PaymentOrder, method: 'upi' | 'card' | 'netbanking' | 'wallet', txnId: string) => void;
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
+  isWaitingForNextTurn = false,
+  nextTurnCountdown,
   onQuickReplyClick,
   onGatedActionConfirm,
   onOpenProductDetail,
   onAddToCart,
   onOpenPaymentModal,
   onSimulateFailure,
-  onOpenInvoice
+  onOpenInvoice,
+  onAddBundleToCart,
+  onRequestNewLink,
+  onPaymentSuccess
 }) => {
+  const handleGatedConfirmClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Trigger gated confirmation to transition to Stage 1 (Ephemeral Payment Card)
+    if (message.gatedAction) {
+      onGatedActionConfirm(message.gatedAction, e);
+    }
+  };
+
+  if (!message.content?.trim() && !message.toolCalls?.length && !message.gatedAction && !message.paymentOrder) {
+    return null;
+  }
+
   const isUser = message.sender === 'user';
 
   const formatContent = (content: string) => {
@@ -94,9 +120,80 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           </div>
 
+          {message.attachment && message.attachment.type === 'image' && (
+            <div className="mb-3">
+              <img src={message.attachment.url} alt="Workspace upload" className="rounded-lg max-h-48 border border-neutral-700 object-cover w-full" />
+            </div>
+          )}
           {/* Formatted Text Content */}
           <div className="space-y-1">{formatContent(message.content)}</div>
+          {message.visionAnalysis && (
+            <div className="mt-4 p-3 bg-neutral-900 border border-neutral-800 rounded-xl space-y-3">
+              <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
+                <Sparkles className="w-4 h-4" />
+                Vision Analysis Result
+              </div>
+              
+              <div className="p-2.5 bg-neutral-950 border border-neutral-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <span className="text-neutral-300 text-xs">
+                  <strong className="text-neutral-100">Detected:</strong> {message.visionAnalysis.detectedIssue}
+                </span>
+              </div>
+
+              {message.visionAnalysis.products.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs text-neutral-400 uppercase tracking-wider font-bold">Recommended Bundle</div>
+                  <div className="flex flex-col gap-2">
+                    {message.visionAnalysis.products.map(p => (
+                      <div key={p.id} className="flex gap-2 items-center bg-neutral-950 border border-neutral-800 p-2 rounded-lg">
+                        <img src={p.image} className="w-10 h-10 rounded border border-neutral-800 object-cover" alt={p.name} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-white truncate">{p.name}</div>
+                          <div className="text-[10px] text-neutral-500">₹{p.price.toLocaleString('en-IN')}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {onAddBundleToCart && (
+                    <button 
+                      onClick={() => onAddBundleToCart(message.visionAnalysis!.products)}
+                      className="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Add Workspace Bundle to Cart
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
+
+        {/* Micro-interaction spinner & 'Analyzing...' sub-text below Merchant Agent bubble during the 3-second delay */}
+        {!isUser && isWaitingForNextTurn && (
+          <div 
+            id={`merchant-analyzing-${message.id}`}
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-neutral-900/90 border border-neutral-800 text-xs text-neutral-300 w-fit animate-fadeIn shadow-sm"
+          >
+            <div className="relative flex items-center justify-center w-3.5 h-3.5 shrink-0">
+              <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+              <span className="absolute w-2 h-2 rounded-full bg-blue-400/40 animate-ping" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-neutral-200">Analyzing...</span>
+              <span className="text-[11px] text-neutral-400">
+                Evaluating terms
+              </span>
+              {nextTurnCountdown !== undefined && nextTurnCountdown !== null && (
+                <span className="font-mono text-blue-400 font-semibold text-[11px]">
+                  ({nextTurnCountdown}s)
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Security Alerts Banner (Zero-Trust Feedback) */}
         {message.securityAlerts && message.securityAlerts.length > 0 && (
@@ -262,11 +359,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               <button
                 type="button"
                 id="btn-gated-confirm-action"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onGatedActionConfirm(message.gatedAction!);
-                }}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-green-900/40"
+                onClick={handleGatedConfirmClick}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-green-900/40 cursor-pointer"
               >
                 <Check className="w-4 h-4" />
                 <span>{message.gatedAction.label}</span>
@@ -283,6 +377,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             onOpenPaymentModal={onOpenPaymentModal}
             onSimulateFailure={onSimulateFailure}
             onOpenInvoice={onOpenInvoice}
+            onRequestNewLink={onRequestNewLink}
+            onPaymentSuccess={onPaymentSuccess}
           />
         )}
 
@@ -293,7 +389,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               <button
                 key={idx}
                 id={`chip-quick-reply-${idx}`}
-                onClick={() => onQuickReplyClick(reply)}
+                onClick={() => {
+                  if ((reply === 'Complete Secure Checkout' || reply === 'Open Razorpay Link') && message.paymentOrder) {
+                    onOpenPaymentModal(message.paymentOrder);
+                  } else {
+                    onQuickReplyClick(reply);
+                  }
+                }}
                 className="px-3.5 py-1.5 rounded-full bg-transparent border border-neutral-700 hover:border-neutral-400 text-neutral-300 text-[13px] sm:text-sm transition-all"
               >
                 {reply}

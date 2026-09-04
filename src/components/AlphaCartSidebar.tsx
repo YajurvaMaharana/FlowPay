@@ -30,9 +30,14 @@ interface AlphaCartSidebarProps {
   toolCallsHistory: ToolCallEvent[];
   activePaymentOrder: PaymentOrder | null;
   pendingGatedAction: boolean;
+  isA2AMode?: boolean;
+  isA2ATyping?: boolean;
+  onToggleA2A?: () => void;
+  onNextA2ATurn?: () => void;
+  onAddBundleToCart?: (products: Product[]) => void;
   activeTab: 'chat' | 'audit' | 'catalog' | 'cart' | 'security';
   onTabChange: (tab: 'chat' | 'audit' | 'catalog' | 'cart' | 'security') => void;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, imageBase64?: string) => void;
   onGatedConfirm: (action: NonNullable<Message['gatedAction']>) => void;
   onOpenProductDetail: (product: Product) => void;
   onAddToCart: (product: Product) => void;
@@ -45,6 +50,8 @@ interface AlphaCartSidebarProps {
   onSelectScenario: (scenario: TestScenario) => void;
   onOpenToolsModal: () => void;
   onResetSession: () => void;
+  onRequestNewLink?: (order: PaymentOrder) => void;
+  onPaymentSuccess?: (order: PaymentOrder, method: 'upi' | 'card' | 'netbanking' | 'wallet', txnId: string) => void;
 }
 
 export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
@@ -62,6 +69,11 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
   toolCallsHistory,
   activePaymentOrder,
   pendingGatedAction,
+  isA2AMode,
+  isA2ATyping,
+  onToggleA2A,
+  onNextA2ATurn,
+  onAddBundleToCart,
   activeTab,
   onTabChange,
   onSendMessage,
@@ -76,7 +88,9 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
   onOpenInvoice,
   onSelectScenario,
   onOpenToolsModal,
-  onResetSession
+  onResetSession,
+  onRequestNewLink,
+  onPaymentSuccess
 }) => {
   
   const [isSecurityPopoverOpen, setIsSecurityPopoverOpen] = useState(false);
@@ -339,6 +353,8 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
               onQuickReply={(reply) => {
                 if (reply === 'View Tax Invoice' && activePaymentOrder) {
                   onOpenInvoice(activePaymentOrder);
+                } else if ((reply === 'Complete Secure Checkout' || reply === 'Open Razorpay Link') && activePaymentOrder) {
+                  onOpenPaymentModal(activePaymentOrder);
                 } else {
                   onSendMessage(reply);
                 }
@@ -353,6 +369,11 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
               onSimulateFailure={onSimulateFailure}
               onOpenInvoice={onOpenInvoice}
               onClearScenario={() => {}}
+              isA2AMode={isA2AMode}
+              isA2ATyping={isA2ATyping}
+              onNextA2ATurn={onNextA2ATurn}
+              onRequestNewLink={onRequestNewLink}
+              onPaymentSuccess={onPaymentSuccess}
             />
           )}
 
@@ -402,6 +423,8 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
                 alerts={securityAlerts}
                 toolCalls={toolCallsHistory}
                 onOpenToolsModal={onOpenToolsModal}
+                isA2AMode={isA2AMode}
+                onToggleA2A={onToggleA2A}
               />
             </div>
           )}

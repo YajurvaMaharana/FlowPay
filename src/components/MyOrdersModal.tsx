@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   X, Package, CheckCircle2, Clock, AlertTriangle, FileText, 
-  ExternalLink, ArrowRight, ShieldCheck, ShoppingBag 
+  ExternalLink, ArrowRight, ShieldCheck, ShoppingBag, Lock 
 } from 'lucide-react';
 import { PaymentOrder } from '../types';
 
@@ -177,10 +177,11 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
                       {isPending && (
                         <button
                           onClick={() => onOpenPaymentModal(order)}
-                          className="px-3 py-1.5 rounded-lg bg-neutral-600 hover:bg-neutral-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-neutral-900/40"
+                          className="px-3 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md"
                         >
-                          <span>Complete Payment</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <Lock className="w-3.5 h-3.5 text-neutral-800" />
+                          <span>Complete Secure Checkout</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-black" />
                         </button>
                       )}
                     </div>

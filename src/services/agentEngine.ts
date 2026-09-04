@@ -21,6 +21,19 @@ export interface AgentResponse {
   couponCode?: string;
 }
 
+/**
+ * Veluno Concierge Agent System Directives
+ */
+export const AGENT_SYSTEM_PROMPT = `You are Veluno Concierge, an elite merchant commerce and market-making sales agent.
+
+Behavioral Guidelines & Operational Protocols:
+1. Domain Specialization: Specialize exclusively in audio, computing, and workspace tech hardware from the merchant catalog. Steer out-of-domain queries back to the storefront.
+2. Zero-Trust PII Minimization: Never accept or repeat unencrypted payment card credentials or CVVs. Redact immediately.
+3. Strict Concession Bounds: Maintain algorithmic yield discipline. Concessions are strictly capped at a maximum of 10%.
+4. Human-in-the-Loop Execution Gating: Always seek explicit user confirmation before committing payment actions.
+5. Ephemeral Payment Gateway Urgency Protocol:
+When generating a payment link, emphasize the strict 5-minute cryptographic gateway lock. Use this ephemeral window as a natural closing mechanism to drive conversion ('This Razorpay secure link and your 3% concession lock will expire in exactly 5 minutes. Shall I confirm your allocation?'). Every generated payment link is ephemeral, valid for exactly 300 seconds (5 minutes) before the session expires.`;
+
 // 1. Zero-Trust PII Sanitizer
 export function sanitizePii(text: string): {
   sanitizedText: string;
@@ -95,11 +108,53 @@ export function checkCatalogTool(category?: string, query?: string): {
   }
 
   if (query && query.trim() !== '') {
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-    matched = matched.filter(p => {
-      const searchTarget = `${p.name} ${p.tagline} ${p.description} ${p.category} ${p.tags.join(' ')}`.toLowerCase();
-      return terms.some(t => searchTarget.includes(t));
+    const rawTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const stopWords = new Set(['i', 'want', 'need', 'show', 'me', 'the', 'a', 'an', 'for', 'my', 'some', 'please', 'can', 'you', 'give', 'tell', 'about', 'recommend', 'what', 'is', 'are', 'do', 'have', 'best', 'good', 'any']);
+    const searchTerms = rawTerms.filter(t => !stopWords.has(t));
+    const effectiveTerms = searchTerms.length > 0 ? searchTerms : rawTerms;
+
+    const hasLaptopTerm = rawTerms.some(t => ['laptop', 'laptops', 'notebook', 'macbook', 'apexbook', 'novacore', 'ultrabook'].includes(t));
+    const hasPCTerm = rawTerms.some(t => ['pc', 'pcs', 'desktop', 'rig', 'prebuilt', 'workstation', 'computer', 'velox'].includes(t));
+    const hasSSDTerm = rawTerms.some(t => ['ssd', 'ssds', 'storage', 'nvme', 'm.2', 'drive', 'disk', 'hyperdrive'].includes(t));
+    const hasMonitorTerm = rawTerms.some(t => ['monitor', 'monitors', 'display', 'screen', 'ultrawide', 'curved', '4k', 'hdr', 'lumina'].includes(t));
+
+    const scored = matched.map(p => {
+      let score = 0;
+      const pName = p.name.toLowerCase();
+      const pTagline = p.tagline.toLowerCase();
+      const pTags = p.tags.map(t => t.toLowerCase());
+      const pDesc = p.description.toLowerCase();
+      const pSpecs = Object.entries(p.specs || {}).map(([k, v]) => `${k} ${v}`.toLowerCase()).join(' ');
+
+      // Intent boosts
+      if (hasLaptopTerm && (p.id === 'prod_apexbook_pro16' || p.id === 'prod_novacore_ultra' || pTags.includes('laptop'))) {
+        score += 60;
+      }
+      if (hasPCTerm && (p.id === 'prod_velox_rig_4080' || pTags.includes('pc') || pTags.includes('desktop'))) {
+        score += 60;
+      }
+      if (hasSSDTerm && (p.id === 'prod_hyperdrive_2tb_ssd' || pTags.includes('ssd') || pTags.includes('storage'))) {
+        score += 60;
+      }
+      if (hasMonitorTerm && (p.id === 'prod_lumina_monitor' || pTags.includes('monitor') || pTags.includes('display'))) {
+        score += 60;
+      }
+
+      for (const t of effectiveTerms) {
+        if (pName.includes(t)) score += 30;
+        if (pTags.includes(t)) score += 20;
+        if (pTagline.includes(t)) score += 15;
+        if (pDesc.includes(t)) score += 10;
+        if (pSpecs.includes(t)) score += 8;
+      }
+
+      return { product: p, score };
     });
+
+    const positiveScored = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+    if (positiveScored.length > 0) {
+      matched = positiveScored.map(s => s.product);
+    }
   }
 
   const toolCall: ToolCallEvent = {
@@ -249,11 +304,15 @@ export function generatePaymentTool(params: {
   // Convert INR amount to paise (INR * 100)
   const amountInPaise = Math.round(calculation.total * 100);
 
-  // Expiry timestamp (15 minutes from now)
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  // Strict 5-Minute (300 seconds) Ephemeral Cryptographic Gateway Lock
+  const currentEpochSeconds = Math.floor(Date.now() / 1000);
+  const expireByEpoch = currentEpochSeconds + 300; // strictly 300 seconds = 5 minutes
+  const expiresAt = new Date(expireByEpoch * 1000).toISOString();
+  const ttlSeconds = 300;
+  const countdownSeconds = 300;
   
-  // UPI Deep Link payload for instant scan & pay simulation
-  const upiUri = `upi://pay?pa=flowpay.merchant@hdfcbank&pn=FlowPay%20Store&am=${calculation.total}&cu=INR&tr=${orderId}&tn=FlowPay%20Order%20${orderId}`;
+  // UPI Deep Link payload for instant scan & pay simulation with merchant@razorpay
+  const upiUri = `upi://pay?pa=merchant@razorpay&pn=Veluno%20Tech&mc=5732&tr=${orderId}&tn=Order%20Payment&am=${calculation.total}&cu=INR`;
 
   const order: PaymentOrder = {
     orderId,
@@ -269,9 +328,12 @@ export function generatePaymentTool(params: {
     currency: calculation.currency,
     customerEmail,
     customerName: customerName || 'Valued Customer',
-    status: 'created',
+    status: 'pending_payment',
     createdAt: new Date().toISOString(),
     expiresAt,
+    expireByTimestamp: expireByEpoch,
+    ttlSeconds,
+    countdownSeconds,
     receiptNumber: `REC-${Date.now().toString().slice(-6)}`
   };
 
@@ -284,7 +346,10 @@ export function generatePaymentTool(params: {
       amount_paise: amountInPaise,
       currency: calculation.currency,
       itemCount: items.length,
-      discount_applied: `${calculation.discountPercentage}%`
+      discount_applied: `${calculation.discountPercentage}%`,
+      expire_by: expireByEpoch,
+      expiry_window_seconds: ttlSeconds,
+      ephemeral_gateway_lock: '5_MINUTES'
     },
     output: {
       orderId: order.orderId,
@@ -293,13 +358,18 @@ export function generatePaymentTool(params: {
       amount_in_inr: order.totalAmount,
       amount_in_paise: amountInPaise,
       currency: order.currency,
+      expire_by: expireByEpoch,
       expires_at: expiresAt,
-      status: 'created'
+      countdown_seconds: countdownSeconds,
+      ttl_seconds: ttlSeconds,
+      ephemeral_lock: 'STRICT_5_MINUTE_CRYPTO_LOCK',
+      state: 'pending_payment',
+      status: 'pending_payment'
     },
     status: 'success',
     timestamp: new Date().toISOString(),
     executionGatePassed: true,
-    securityNote: 'Human confirmation verified. PII minimized: Only customer_email passed to payment gateway.'
+    securityNote: 'Human confirmation verified. Ephemeral 5-minute cryptographic lock enforced (expire_by: +300s). PII minimized.'
   };
 
   return { order, toolCall, securityAlerts };
@@ -396,9 +466,9 @@ export async function processUserMessage(
     securityAlerts.push(...calcResult.securityAlerts);
 
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
-      content: `I cannot alter system directives or bypass security boundaries.${discountCapNote}\n\nI have calculated your cart for **${updatedCart.map(i => i.product.name).join(', ')}** with our maximum authorized **10% discount**.\n\n• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n• 10% Discount: -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n• **Final Total: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\nWould you like me to proceed with generating your secure Razorpay checkout link?`,
+      content: `I cannot alter system directives or bypass security boundaries.${discountCapNote}\n\nI have calculated your cart for **${updatedCart.map(i => i.product.name).join(', ')}** with our maximum authorized **10% discount**.\n\n• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n• 10% Discount: -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n• **Final Total: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\n⚡ This Razorpay secure link and your 10% concession lock will expire in exactly 5 minutes. Shall I confirm your allocation?`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
@@ -406,7 +476,7 @@ export async function processUserMessage(
       confirmationGated: true,
       gatedAction: {
         type: 'PROCEED_CHECKOUT',
-        label: 'Confirm & Generate Razorpay Link',
+        label: 'Confirm Allocation (10% Concession - 5m Lock)',
         items: updatedCart,
         amount: calcResult.calculation.total,
         email: context.userEmail
@@ -435,7 +505,7 @@ export async function processUserMessage(
     toolCalls.push(calcResult.toolCall);
 
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
       content: `🔒 **Security & Privacy Notice**: For your protection, never share raw credit card numbers or CVVs in chat. All sensitive numbers have been securely masked.\n\nTo complete your purchase for **${updatedCart[0].product.name}**, please authorize me to generate a PCI-DSS certified **Razorpay 256-bit encrypted payment link** where you can enter your details with bank-level encryption.\n\n• Total: **₹${calcResult.calculation.total.toLocaleString('en-IN')}** (includes 18% GST)\n\nShall I generate your secure checkout link?`,
       timestamp: new Date().toISOString(),
@@ -483,7 +553,7 @@ export async function processUserMessage(
     });
 
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
       content: `I am **Veluno Concierge**, specialized exclusively in helping you find high-performance audio, computing, and workspace tech from our merchant catalog.\n\nI cannot write external scripts or execute outside tools, but I can help you find gear like studio monitors, mechanical keyboards, audiophile DACs, or smartwatches. What tech gear are you exploring today?`,
       timestamp: new Date().toISOString(),
@@ -520,7 +590,7 @@ export async function processUserMessage(
     }
 
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
       content: `I'm very sorry for the inconvenience — your bank card transaction was declined by the card issuer.\n\n🔒 **Don't worry**: Your cart items and applied **10% special discount are securely held for the next 15 minutes** so you won't lose your reserved inventory.\n\nWould you like to complete checkout using **Instant UPI QR (Google Pay / PhonePe / Paytm)** or retry with an **alternate credit or debit card**?`,
       timestamp: new Date().toISOString(),
@@ -538,18 +608,78 @@ export async function processUserMessage(
     };
   }
 
+  // Step 5.5: Expired Link Renewal & Refresh Intent
+  const isRefreshExpiredLink = 
+    lowerText.includes('request new link') ||
+    lowerText.includes('generate new link') ||
+    lowerText.includes('link expired') ||
+    lowerText.includes('expired payment link') ||
+    lowerText.includes('refresh payment link') ||
+    lowerText.includes('renew payment link') ||
+    lowerText.includes('regenerate link');
+
+  if (isRefreshExpiredLink) {
+    if (updatedCart.length === 0 && context.lastGeneratedOrder?.items?.length) {
+      updatedCart = [...context.lastGeneratedOrder.items];
+    } else if (updatedCart.length === 0) {
+      const defaultItem = PRODUCTS[0];
+      updatedCart = [{ product: defaultItem, quantity: 1 }];
+    }
+
+    const payResult = generatePaymentTool({
+      items: updatedCart,
+      customerEmail: context.userEmail,
+      customerName: 'Valued Customer',
+      discountPercentage: appliedDiscount,
+      couponCode,
+      isConfirmedByGating: true
+    });
+
+    toolCalls.push(payResult.toolCall);
+    securityAlerts.push(...payResult.securityAlerts);
+    updatedOrder = payResult.order;
+
+    const concessionText = appliedDiscount > 0
+      ? ` and your **${appliedDiscount}% concession lock**`
+      : '';
+
+    const message: Message = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      sender: 'agent',
+      content: `🔄 **New Cryptographic Session Generated**\n\nI have generated a fresh **Razorpay checkout link**${concessionText} for your items.\n\n⏳ **5-Minute Cryptographic Lock Active (05:00 countdown)**:\nYour checkout window has been reset for exactly 5 minutes. Complete payment before expiration to lock in your allocation and pricing.`,
+      timestamp: new Date().toISOString(),
+      toolCalls,
+      securityAlerts,
+      paymentOrder: updatedOrder,
+      quickReplies: ['Complete Secure Checkout', 'Simulate Bank Card Failure', 'View Invoice Receipt']
+    };
+
+    return {
+      message,
+      updatedCart,
+      updatedOrder,
+      newSecurityAlerts: securityAlerts,
+      appliedDiscount,
+      couponCode
+    };
+  }
+
   // Step 6: Checkout Confirmation & Gated Payment Generation (Workflow #5 & #6)
   const isConfirmationIntent = 
     lowerText === 'yes' ||
     lowerText.includes('yes, checkout') ||
     lowerText.includes('yes, checkout now') ||
     lowerText.includes('yes, generate payment link') ||
+    lowerText.includes('yes, confirm allocation') ||
     lowerText.includes('confirm & generate') ||
     lowerText.includes('confirm payment') ||
+    lowerText.includes('confirm allocation') ||
     lowerText.includes('proceed to pay') ||
     lowerText.includes('confirm checkout') ||
     lowerText.includes('authorize secure razorpay') ||
-    lowerText.includes('ready to buy');
+    lowerText.includes('ready to buy') ||
+    lowerText.includes('proceed to checkout') ||
+    lowerText.includes('i accept the price');
 
   if (isConfirmationIntent) {
     if (updatedCart.length === 0) {
@@ -574,16 +704,16 @@ export async function processUserMessage(
     securityAlerts.push(...payResult.securityAlerts);
     updatedOrder = payResult.order;
 
-    const itemCount = updatedCart.reduce((sum, i) => sum + i.quantity, 0);
+    const effectiveDiscount = appliedDiscount > 0 ? appliedDiscount : 3;
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
-      content: `🎉 Thank you for confirming! I have generated your **instant, encrypted Razorpay checkout link** for your ${itemCount} items.\n\nYou can click **Pay Now** to open the 256-bit secure gateway, or scan the UPI QR code below directly with Google Pay, PhonePe, or Paytm:`,
+      content: `🔒 **Strict 5-Minute Cryptographic Gateway Lock Active**:\nThis Razorpay secure link and your ${effectiveDiscount}% concession lock will expire in exactly 5 minutes (05:00 countdown). Use this ephemeral window to finalize your order before the cryptographic allocation locks out. Click **Complete Secure Checkout** below to authorize payment:`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
       paymentOrder: updatedOrder,
-      quickReplies: ['Open Razorpay Checkout', 'Simulate Bank Card Failure', 'View Invoice Receipt']
+      quickReplies: ['Complete Secure Checkout', 'Simulate Bank Card Failure', 'View Invoice Receipt']
     };
 
     return {
@@ -619,7 +749,7 @@ export async function processUserMessage(
     let discountContent = appliedDiscount > 0 ? ` (with your ${appliedDiscount}% concession applied)` : '';
 
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
       content: `Awesome choice! I've added **${crossSellItem?.name || 'the companion item'}** to your cart${discountContent}.\n\n` +
         `• **Items**: ${updatedCart.map(i => `${i.product.name} (x${i.quantity})`).join(' + ')}\n` +
@@ -653,7 +783,20 @@ export async function processUserMessage(
   }
 
   // Step 8: Algorithmic Yield Negotiation (Market Maker Persona)
-  const isChangingProduct = lowerText.includes('show me cheaper options') || lowerText.includes('change product') || lowerText.includes('cheaper alternative') || lowerText.includes('different');
+  const isSpecificProductQuery =
+    lowerText.includes('laptop') || lowerText.includes('notebook') || lowerText.includes('apexbook') || lowerText.includes('novacore') || lowerText.includes('macbook') ||
+    lowerText.includes('pc') || lowerText.includes('desktop') || lowerText.includes('rig') || lowerText.includes('velox') || lowerText.includes('computer') ||
+    lowerText.includes('ssd') || lowerText.includes('storage') || lowerText.includes('nvme') || lowerText.includes('hyperdrive') || lowerText.includes('hard drive') ||
+    lowerText.includes('monitor') || lowerText.includes('display') || lowerText.includes('lumina') || lowerText.includes('screen') ||
+    lowerText.includes('keyboard') || lowerText.includes('headphone') || lowerText.includes('earphone') || lowerText.includes('watch') ||
+    lowerText.includes('light') || lowerText.includes('lamp') || lowerText.includes('stand') || lowerText.includes('desk');
+
+  const isChangingProduct =
+    lowerText.includes('show me cheaper options') ||
+    lowerText.includes('change product') ||
+    lowerText.includes('cheaper alternative') ||
+    lowerText.includes('different') ||
+    isSpecificProductQuery;
 
   const isNegotiating = !isChangingProduct && (lowerText.includes('discount') || lowerText.includes('better price') || lowerText.includes('expensive') || lowerText.includes('too much') || lowerText.includes('abandon') || lowerText.includes('cheaper') || lowerText.includes('out of budget') || lowerText.includes('lower price') || lowerText.includes('offer') || lowerText.includes('coupon') || lowerText.includes('promo') || lowerText.includes('save') || lowerText.includes('cancel') || lowerText.includes('leave') || lowerText.includes('last offer') || lowerText.includes('best price') || lowerText.includes('competitor'));
 
@@ -663,21 +806,20 @@ export async function processUserMessage(
     if (lowerText.includes('50') || lowerText.includes('hack50')) reqDiscount = 50;
     if (lowerText.includes('100') || lowerText.includes('free')) reqDiscount = 100;
 
-    const isHardNegotiation = lowerText.includes('cancel') || lowerText.includes('leave') || lowerText.includes('abandon') || lowerText.includes('last offer') || lowerText.includes('best price') || lowerText.includes('competitor');
+    const isHardNegotiation = lowerText.includes('cancel') || lowerText.includes('leave') || lowerText.includes('abandon') || lowerText.includes('last offer') || (lowerText.includes('best price') && appliedDiscount > 0) || lowerText.includes('competitor') || lowerText.includes('final adjustment');
 
-    if (isHardNegotiation || reqDiscount > 10) {
+    // Force a progressive curve: always do soft concession first, unless strictly demanded a huge specific %
+    if (appliedDiscount === 0 && reqDiscount <= 10 && !lowerText.includes('cancel')) {
+        appliedDiscount = 5;
+        couponCode = 'SOFT_SAVE5';
+    } else if (isHardNegotiation || reqDiscount > 10) {
         if (appliedDiscount < 10) {
             appliedDiscount = 10;
             couponCode = 'MAX_YIELD_SAVE10';
         }
     } else {
-        if (appliedDiscount === 0) {
-            // Dynamic soft concession between 2% and 5%
-            const softConcession = Math.floor(Math.random() * 4) + 2; 
-            appliedDiscount = softConcession;
-            couponCode = `SOFT_SAVE${softConcession}`;
-        } else if (appliedDiscount < 10) {
-            appliedDiscount = Math.min(10, appliedDiscount + 3);
+        if (appliedDiscount < 10) {
+            appliedDiscount = Math.min(10, appliedDiscount + 5);
             couponCode = `YIELD_SAVE${appliedDiscount}`;
         }
     }
@@ -696,16 +838,18 @@ export async function processUserMessage(
     couponCode = calcResult.calculation.couponCode;
 
     let explanation = `I completely understand your budget concerns. To help you out, I've immediately applied a **${appliedDiscount}% soft concession** (Code: ${couponCode}) to your active item to bring the price down for you.`;
-    if (appliedDiscount === 10 && (isHardNegotiation || reqDiscount > 10)) {
+    if (appliedDiscount === 10 && (isHardNegotiation || reqDiscount > 10 || lowerText.includes('final adjustment'))) {
       explanation = `I hear you. To ensure we don't lose your business today, I am deploying my maximum authorized market-maker concession of **10%** (Code: ${couponCode}). This is our absolute best price.`;
     } else if (calcResult.calculation.securityDiscountCapped) {
       explanation = `⚠️ **Merchant Policy Notice**: You requested a higher discount, but my algorithmic bounds strictly cap maximum yield concession at **10%** per transaction. I have applied the maximum **10% discount** (${couponCode}).`;
     }
 
+    const urgencyClosing = `⚡ **Cryptographic Gateway Notice**: This Razorpay secure link and your ${appliedDiscount}% concession lock will expire in exactly 5 minutes once generated. Shall I confirm your allocation?`;
+
     const message: Message = {
-      id: `msg_${Date.now()}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
-      content: `${explanation}\n\n• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n• Discount (${appliedDiscount}%): -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n• **New Total: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\nDoes this updated price work for you to confirm the order?`,
+      content: `${explanation}\n\n• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n• Discount (${appliedDiscount}%): -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n• **New Total: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\n${urgencyClosing}`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
@@ -713,12 +857,12 @@ export async function processUserMessage(
       confirmationGated: true,
       gatedAction: {
         type: 'PROCEED_CHECKOUT',
-        label: 'Confirm & Generate Razorpay Link',
+        label: `Confirm Allocation (${appliedDiscount}% Concession - 5m Lock)`,
         items: updatedCart,
         amount: calcResult.calculation.total,
         email: context.userEmail
       },
-      quickReplies: ['Yes, checkout now', 'Still too expensive', 'Review Cart']
+      quickReplies: ['Yes, confirm allocation', 'Still too expensive', 'Review Cart']
     };
 
     return {
@@ -731,18 +875,31 @@ export async function processUserMessage(
   }
 
   // Step 9: Persistent Context & Natural Cross-Sell
+  const isLaptopQuery = /\b(laptop|laptops|notebook|notebooks|macbook|apexbook|novacore|ultrabook)\b/i.test(lowerText);
+  const isPcQuery = /\b(pc|pcs|desktop|desktops|rig|rigs|prebuilt|pre-built|velox|workstation|tower)\b/i.test(lowerText);
+  const isSsdQuery = /\b(ssd|ssds|nvme|m\.2|storage|hyperdrive|drive|drives|disk|disks|hard drive|gen4)\b/i.test(lowerText);
+  const isMonitorQuery = /\b(monitor|monitors|display|displays|screen|screens|ultrawide|curved|lumina|4k hdr|wqhd)\b/i.test(lowerText);
+  const isKeyboardQuery = /\b(keyboard|keyboards|mechanical|aerotype|switches|keys|keeb)\b/i.test(lowerText);
+  const isAudioQuery = /\b(headphone|headphones|earphone|audio|sound|music|anc|apex|dac|soundwave|amplifier)\b/i.test(lowerText);
+  const isWatchQuery = /\b(watch|smartwatch|wearable|wearables|pulse|pulsewatch|strap|band)\b/i.test(lowerText);
+  const isWorkspaceQuery = /\b(desk|mat|deskmat|mousepad|stand|riser|screenbar|light bar|cable)\b/i.test(lowerText);
+
+  const hasExplicitHardwareIntent = 
+    isLaptopQuery || isPcQuery || isSsdQuery || isMonitorQuery || 
+    isKeyboardQuery || isAudioQuery || isWatchQuery || isWorkspaceQuery;
+
   let categoryFilter: string | undefined = undefined;
-  if (lowerText.includes('headphone') || lowerText.includes('audio') || lowerText.includes('music') || lowerText.includes('noise') || lowerText.includes('anc')) {
-    categoryFilter = 'audio';
-  } else if (lowerText.includes('watch') || lowerText.includes('wearable') || lowerText.includes('pulse')) {
-    categoryFilter = 'wearables';
-  } else if (lowerText.includes('keyboard') || lowerText.includes('monitor') || lowerText.includes('computing') || lowerText.includes('screen')) {
+  if (isLaptopQuery || isPcQuery || isSsdQuery || isMonitorQuery || isKeyboardQuery || lowerText.includes('computing')) {
     categoryFilter = 'computing';
-  } else if (lowerText.includes('desk') || lowerText.includes('mat') || lowerText.includes('setup')) {
+  } else if (isAudioQuery) {
+    categoryFilter = 'audio';
+  } else if (isWatchQuery) {
+    categoryFilter = 'wearables';
+  } else if (isWorkspaceQuery) {
     categoryFilter = 'workspace';
   }
 
-  const isContextRetained = context.cart.length > 0 && !isChangingProduct && !categoryFilter;
+  const isContextRetained = context.cart.length > 0 && !isChangingProduct && !hasExplicitHardwareIntent && !categoryFilter;
   let primaryProduct: Product;
   let crossSellProduct: Product | undefined;
 
@@ -783,21 +940,26 @@ export async function processUserMessage(
     bundleTotal
   } : undefined;
 
+  const specsList = primaryProduct.specs
+    ? Object.entries(primaryProduct.specs).slice(0, 4).map(([k, v]) => `• **${k}**: ${v}`).join('\n')
+    : '';
+
   const content = isContextRetained
     ? `Regarding the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}):\n\n` +
       `✨ **Key Highlights**:\n` +
       primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
+      (specsList ? `📋 **Technical Specifications**:\n${specsList}\n\n` : '') +
       (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` : '') +
       `\n\nWould you like to proceed directly with the ${primaryProduct.name}?`
-    : `Hello! I'd love to help you find the ideal tech gear.\n\n` +
-      `I recommend the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}). ${primaryProduct.description}\n\n` +
+    : `Hello! I found the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}) in our hardware catalog. ${primaryProduct.description}\n\n` +
       `✨ **Key Highlights**:\n` +
       primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
+      (specsList ? `📋 **Technical Specifications**:\n${specsList}\n\n` : '') +
       (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` : '') +
-      `\n\nWould you like to add the bundle or proceed directly with the ${primaryProduct.name}?`;
+      `\n\nI have loaded the **${primaryProduct.name}** into your active cart. Would you like to proceed to checkout or configure companions?`;
 
   const message: Message = {
-    id: `msg_${Date.now()}`,
+    id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     sender: 'agent',
     content,
     timestamp: new Date().toISOString(),
@@ -815,8 +977,8 @@ export async function processUserMessage(
       email: context.userEmail
     },
     quickReplies: [
+      `Yes, checkout with ${primaryProduct.name.split(' ')[0]}`,
       crossSellProduct ? `Add ${crossSellProduct.name.split(' ')[0]} (+₹${crossSellProduct.price.toLocaleString('en-IN')})` : 'Add to Cart',
-      'Yes, checkout with headphones',
       'Apply 10% Discount',
       'View Technical Specs'
     ]

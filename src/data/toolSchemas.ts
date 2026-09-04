@@ -104,13 +104,13 @@ export const TOOL_SCHEMAS: ToolSchemaDefinition[] = [
   },
   {
     name: 'generate_payment',
-    signature: 'generate_payment(final_amount, customer_email, order_description)',
-    description: 'Generates an encrypted Razorpay payment link and dynamic UPI QR code. Requires explicit Human-in-the-loop user confirmation. Sensitive PII card numbers are strictly forbidden in this payload.',
+    signature: 'generate_payment(final_amount, customer_email, order_description, expire_by)',
+    description: 'Generates an ephemeral, encrypted Razorpay payment link with a strict 5-minute cryptographic gateway lock and dynamic UPI QR code. Requires explicit Human-in-the-loop user confirmation. Sensitive PII card numbers are strictly forbidden in this payload.',
     category: 'payment',
-    securityRule: 'Protocol #2 & #3: PII Minimization & Human-in-the-Loop Gating — Requires user approval before call; credit card numbers/CVV must never be included in payload.',
+    securityRule: 'Protocol #2 & #3: PII Minimization & Human-in-the-Loop Gating — Requires user approval before call; credit card numbers/CVV must never be included in payload. Enforces 5-minute cryptographic lock.',
     schema: {
       name: 'generate_payment',
-      description: 'Generates an encrypted Razorpay payment link and dynamic UPI QR code. Requires explicit Human-in-the-loop user confirmation. PII credit card numbers are strictly forbidden.',
+      description: 'Generates an encrypted Razorpay payment link with 5-minute gateway lock and dynamic UPI QR code. Requires explicit Human-in-the-loop user confirmation. PII credit card numbers are strictly forbidden.',
       parameters: {
         type: 'object',
         properties: {
@@ -126,21 +126,31 @@ export const TOOL_SCHEMAS: ToolSchemaDefinition[] = [
           order_description: {
             type: 'string',
             description: 'Summary description of the items and order fulfillment terms.'
+          },
+          expire_by: {
+            type: 'number',
+            description: 'Explicit Unix epoch timestamp in seconds indicating when the payment link expires (strictly set to current epoch + 300 seconds for a 5-minute window).'
           }
         },
-        required: ['final_amount', 'customer_email', 'order_description']
+        required: ['final_amount', 'customer_email', 'order_description', 'expire_by']
       }
     },
     samplePayload: {
       final_amount: 30795.88,
       customer_email: 'valentinine14feb@gmail.com',
-      order_description: 'FlowPay Order: Apex Horizon ANC Headphones + Pro Aluminum Headphone Stand'
+      order_description: 'FlowPay Order: Apex Horizon ANC Headphones + Pro Aluminum Headphone Stand',
+      expire_by: 1772659800
     },
     sampleResponse: {
       orderId: 'ORD-RAZOR-92817',
       razorpayPaymentLinkId: 'plink_N9xQ84hV1',
       razorpayShortUrl: 'https://rzp.io/i/flowpay_N9xQ84hV1',
       qrCodeData: 'upi://pay?pa=flowpay.merchant@razorpay&pn=FlowPay%20Merchant&am=30795.88&cu=INR&tr=ORD-RAZOR-92817',
+      expire_by: 1772659800,
+      expires_at: '2026-03-04T18:55:00.000Z',
+      ttl_seconds: 300,
+      countdown_seconds: 300,
+      gateway_lock: '5_MINUTE_CRYPTOGRAPHIC_LOCK',
       status: 'created',
       totalAmount: 30795.88
     }

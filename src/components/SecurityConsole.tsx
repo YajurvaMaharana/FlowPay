@@ -10,6 +10,8 @@ interface SecurityConsoleProps {
   metrics: SecurityMetrics;
   alerts: SecurityAlert[];
   toolCalls: ToolCallEvent[];
+  isA2AMode?: boolean;
+  onToggleA2A?: () => void;
   onClearAlerts?: () => void;
   onOpenToolsModal?: () => void;
 }
@@ -18,6 +20,8 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({
   metrics,
   alerts,
   toolCalls,
+  isA2AMode,
+  onToggleA2A,
   onOpenToolsModal
 }) => {
   const [showToolsSection, setShowToolsSection] = useState(true);
@@ -71,6 +75,27 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({
           <div className="text-neutral-400 font-display font-bold text-base">100% SECURE</div>
         </div>
       </div>
+
+      {/* A2A Mode Toggle */}
+      {onToggleA2A && (
+        <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <Cpu className="w-4 h-4 text-neutral-200" />
+              <h3 className="font-display font-bold text-xs text-white">Simulate AI Buyer (A2A Mode)</h3>
+            </div>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Automated buyer negotiates with merchant</p>
+          </div>
+          <button
+            onClick={onToggleA2A}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isA2AMode ? 'bg-neutral-200' : 'bg-neutral-700'}`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-black shadow ring-0 transition duration-200 ease-in-out ${isA2AMode ? 'translate-x-4' : 'translate-x-0'}`}
+            />
+          </button>
+        </div>
+      )}
 
       {/* Metric Counters Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

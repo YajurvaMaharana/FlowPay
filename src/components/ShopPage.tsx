@@ -24,17 +24,17 @@ export const ShopPage: React.FC<ShopPageProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [maxPrice, setMaxPrice] = useState<number>(45000);
+  const [maxPrice, setMaxPrice] = useState<number>(300000);
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating'>('featured');
   const [addedAnimationId, setAddedAnimationId] = useState<string | null>(null);
 
   const categories = [
     { id: 'all', label: 'All Masterworks' },
+    { id: 'computing', label: 'Laptops, PCs & Displays' },
     { id: 'audio', label: 'Studio Acoustics' },
     { id: 'workspace', label: 'Workspace Gear' },
     { id: 'accessories', label: 'Precision DACs & Mounts' },
-    { id: 'computing', label: 'Studio Displays & Mon.' },
     { id: 'wearables', label: 'Tactile Wearables' }
   ];
 
@@ -130,11 +130,11 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               <SlidersHorizontal className="w-4 h-4 text-neutral-400" />
               <span>Filters & Specs</span>
             </div>
-            {(selectedCategory !== 'all' || maxPrice < 45000 || onlyInStock || searchQuery) && (
+            {(selectedCategory !== 'all' || maxPrice < 300000 || onlyInStock || searchQuery) && (
               <button
                 onClick={() => {
                   setSelectedCategory('all');
-                  setMaxPrice(45000);
+                  setMaxPrice(300000);
                   setOnlyInStock(false);
                   setSearchQuery('');
                 }}
@@ -201,15 +201,15 @@ export const ShopPage: React.FC<ShopPageProps> = ({
             <input
               type="range"
               min={2000}
-              max={45000}
-              step={1000}
+              max={300000}
+              step={5000}
               value={maxPrice}
               onChange={(e) => setMaxPrice(Number(e.target.value))}
               className="w-full accent-neutral-500 bg-neutral-950 cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-neutral-500 font-mono mt-1">
               <span>₹2,000</span>
-              <span>₹45,000+</span>
+              <span>₹3,00,000</span>
             </div>
           </div>
 

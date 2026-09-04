@@ -40,7 +40,7 @@ export interface CartCalculation {
   originalRequestedDiscount?: number;
 }
 
-export type PaymentStatus = 'created' | 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'created' | 'pending' | 'pending_payment' | 'processing' | 'paid' | 'success' | 'failed' | 'refunded';
 
 export interface PaymentOrder {
   orderId: string;
@@ -53,12 +53,17 @@ export interface PaymentOrder {
   tax: number;
   totalAmount: number;
   amountInPaise?: number;
+  razorpayKey?: string;
+  razorpayOrderId?: string;
   currency: string;
   customerEmail: string;
   customerName?: string;
   status: PaymentStatus;
   createdAt: string;
   expiresAt?: string;
+  expireByTimestamp?: number;
+  ttlSeconds?: number;
+  countdownSeconds?: number;
   paidAt?: string;
   paymentMethod?: 'upi' | 'card' | 'netbanking' | 'wallet';
   failureReason?: string;
@@ -68,7 +73,7 @@ export interface PaymentOrder {
 
 export interface ToolCallEvent {
   id: string;
-  name: 'check_catalog' | 'calculate_cart' | 'generate_payment' | 'handle_payment_failure' | 'scrub_pii';
+  name: 'check_catalog' | 'calculate_cart' | 'generate_payment' | 'handle_payment_failure' | 'scrub_pii' | 'analyze_workspace_vision';
   input: Record<string, any>;
   output: Record<string, any>;
   status: 'executing' | 'success' | 'blocked' | 'failed';
@@ -102,6 +107,11 @@ export interface Message {
   toolCalls?: ToolCallEvent[];
   securityAlerts?: SecurityAlert[];
   paymentOrder?: PaymentOrder;
+  attachment?: { type: 'image'; url: string };
+  visionAnalysis?: {
+    detectedIssue: string;
+    products: Product[];
+  };
   suggestedProducts?: Product[];
   crossSellOffer?: {
     mainProduct: Product;
