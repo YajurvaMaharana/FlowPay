@@ -447,5 +447,131 @@ export const PRODUCTS: Product[] = [
       'Mount': 'Weighted gravity clip'
     },
     tags: ['light', 'lamp', 'desk', 'workspace', 'ergonomic']
+  },
+  {
+    id: 'prod_artisan_keycaps',
+    name: 'CyberForge Hand-Lubed Artisan Keycap Set',
+    tagline: 'Custom Dye-Sub PBT & Handcrafted Resin Artisan Keycap Set',
+    category: 'accessories',
+    price: 2499,
+    originalPrice: 3299,
+    currency: 'INR',
+    rating: 4.9,
+    reviewsCount: 215,
+    inStock: true,
+    stockCount: 50,
+    image: 'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=800&auto=format&fit=crop&q=80',
+    description: 'Ultra-thick 1.5mm Cherry-profile PBT keycaps paired with handcrafted artisan resin escape and spacebar keys. Custom tuned and stem-aligned for AeroType and standard mechanical keyboards.',
+    features: [
+      'Thick 1.5mm PBT with crisp five-sided dye-sublimation',
+      'Handcrafted artisan resin novelty key included',
+      'Compatible with Cherry MX stems & 75%/TKL/65% layouts',
+      'Smooth matte texture resistant to finger oils and shine'
+    ],
+    specs: {
+      'Profile': 'Cherry Ergonomic Profile',
+      'Material': 'Double-shot PBT + Epoxy Resin Accent',
+      'Compatibility': 'MX Style Switches & Cross Stems',
+      'Keys Included': '138 Keys Complete Set'
+    },
+    crossSellProductId: 'prod_keychron_mech',
+    crossSellReason: 'Pair with the AeroType Carbon keyboard for a hand-crafted typing aesthetic.',
+    crossSellDiscount: 10,
+    badge: 'Artisan Craft',
+    tags: ['keycaps', 'artisan', 'keyboard', 'mechanical', 'custom', 'accessories', 'aerotype']
+  },
+  {
+    id: 'prod_laptop_sleeve',
+    name: 'AeroShield Magnetic Protective Laptop Sleeve',
+    tagline: 'Water-Resistant Cordura & Microfiber Magnetic Clasp Sleeve',
+    category: 'accessories',
+    price: 2499,
+    originalPrice: 3199,
+    currency: 'INR',
+    rating: 4.8,
+    reviewsCount: 340,
+    inStock: true,
+    stockCount: 78,
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
+    description: 'Precision-tailored ballistic Cordura exterior with ultra-soft plush microfiber lining and silent auto-aligning magnetic snap closure. Protects laptops against drops, scratches, and rain.',
+    features: [
+      'Invisible snap-aligning magnetic lip closure',
+      'Ballistic weatherproof 1000D Cordura nylon shell',
+      '360° plush microfiber interior scratch protection',
+      'Slim, lightweight profile slips smoothly into backpacks'
+    ],
+    specs: {
+      'Sizing': 'Fits 14" to 16" Laptops & MacBooks',
+      'Exterior': '1000D Weatherproof Cordura',
+      'Interior': 'High-density micro-fleece padding',
+      'Weight': '220g'
+    },
+    crossSellProductId: 'prod_apexbook_pro16',
+    crossSellReason: 'Essential travel protection for ApexBook Pro and NovaCore Ultra laptops.',
+    crossSellDiscount: 10,
+    tags: ['sleeve', 'case', 'laptop', 'protective', 'accessories', 'cordura', 'macbook']
+  },
+  {
+    id: 'prod_usbc_dock',
+    name: 'OmniPort 12-in-1 Thunderbolt 4 & USB-C Dock',
+    tagline: 'Dual 4K@120Hz Display Dock with 100W Power Delivery & Gigabit LAN',
+    category: 'accessories',
+    price: 6999,
+    originalPrice: 8999,
+    currency: 'INR',
+    rating: 4.9,
+    reviewsCount: 410,
+    inStock: true,
+    stockCount: 35,
+    image: 'https://images.unsplash.com/photo-1544652478-6653e09f18a2?w=800&auto=format&fit=crop&q=80',
+    description: 'Transform any laptop into an ultra-fast desktop workstation with a single USB-C or Thunderbolt cable. Features dual HDMI 2.1, DisplayPort 1.4, 100W PD charging, UHS-II SD slot, and Gigabit Ethernet.',
+    features: [
+      'Dual 4K@120Hz or Single 8K@60Hz display output',
+      '100W pass-through GaN fast charging for power-hungry laptops',
+      '10Gbps USB 3.2 Gen 2 transfer ports + UHS-II SD reader',
+      'High-grade extruded aluminum heat-dissipating housing'
+    ],
+    specs: {
+      'Ports': '2x HDMI 2.1, 1x DP 1.4, 1x 100W PD USB-C, 3x USB-A 3.2, 1x RJ45 Gigabit, 1x SD/TF',
+      'Power Delivery': 'Up to 100W Fast Charge',
+      'Material': 'Space Gray Anodized Aluminum',
+      'Compatibility': 'MacBook Pro, Windows Laptops, Thunderbolt 4/3 & USB-C'
+    },
+    crossSellProductId: 'prod_apexbook_pro16',
+    crossSellReason: 'Single-cable dock expansion for your ApexBook Pro or NovaCore Ultra laptop.',
+    crossSellDiscount: 10,
+    badge: 'Pro Dock',
+    tags: ['dock', 'hub', 'usbc', 'thunderbolt', 'accessories', 'laptop', 'display', 'workspace']
+  },
+  {
+    id: 'prod_vertical_stand',
+    name: 'GravityHold Aluminum Vertical Laptop Stand',
+    tagline: 'Dual-Slot CNC Aluminum Vertical Clamshell Docking Stand',
+    category: 'workspace',
+    price: 2799,
+    originalPrice: 3699,
+    currency: 'INR',
+    rating: 4.8,
+    reviewsCount: 198,
+    inStock: true,
+    stockCount: 60,
+    image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&auto=format&fit=crop&q=80',
+    description: 'Heavyweight CNC milled aluminum vertical laptop stand holding up to two laptops or tablets in closed-clamshell desk mode. Maximizes desk real estate and optimizes airflow.',
+    features: [
+      'Gravity auto-locking or adjustable dual-slot clamping',
+      'Anti-scratch curved silicone cushions on all contact surfaces',
+      'Substantial solid aluminum base prevents tipping',
+      'Optimizes vertical airflow for docked laptop setups'
+    ],
+    specs: {
+      'Material': 'Anodized Sandblasted Aluminum 6063',
+      'Capacity': 'Holds 2 devices (thickness up to 32mm each)',
+      'Weight': '650g heavy anti-tipping base',
+      'Finish': 'Space Gray Matte'
+    },
+    crossSellProductId: 'prod_apexbook_pro16',
+    crossSellReason: 'Clean closed-clamshell vertical docking for your laptop and external monitor setup.',
+    crossSellDiscount: 10,
+    tags: ['stand', 'vertical', 'dock', 'laptop', 'workspace', 'aluminum', 'accessories']
   }
 ];

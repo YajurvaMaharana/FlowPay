@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Message, PaymentOrder, Product } from '../types';
 import { ToolCallBadge } from './ToolCallBadge';
 import { PaymentLinkCard } from './PaymentLinkCard';
+import { UpiQrCard } from './UpiQrCard';
 import confetti from 'canvas-confetti';
 import { 
   Bot, User, ShieldAlert, Sparkles, ShieldCheck, ArrowRight, 
@@ -345,6 +346,37 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
 
+        {/* Ecosystem Compatibility & Contextual Memory Card */}
+        {message.ecosystemAwareness && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-900 border border-neutral-700/80 space-y-2.5 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-neutral-200 font-semibold">
+                <Sparkles className="w-4 h-4 text-neutral-400" />
+                <span>Ecosystem Compatibility Memory</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-300 border border-neutral-700 text-[10px] font-mono">
+                Contextual Cross-Sell
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs space-y-1.5">
+              <div className="text-[11px] text-neutral-300">
+                <span className="text-neutral-400">Core Purchased Item: </span>
+                <span className="font-semibold text-white">{message.ecosystemAwareness.purchasedCoreProduct}</span>
+              </div>
+              {message.ecosystemAwareness.contextTags && message.ecosystemAwareness.contextTags.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {message.ecosystemAwareness.contextTags.map((tag, tIdx) => (
+                    <span key={tIdx} className="text-[9px] px-2 py-0.5 rounded-md bg-neutral-900 text-neutral-400 border border-neutral-800 font-mono">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Human-in-the-Loop Gated Execution Confirmation Button */}
         {message.confirmationGated && message.gatedAction && (
           <div className="p-3.5 rounded-2xl bg-green-950/30 border border-green-500/40 space-y-2 shadow-lg">
@@ -368,6 +400,20 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Stylized Dark-Themed UPI QR Code Card Embed (When Order is Pending) */}
+        {message.paymentOrder && 
+          (message.paymentOrder.status === 'pending' || 
+           message.paymentOrder.status === 'pending_payment' || 
+           message.paymentOrder.status === 'created' || 
+           (!['paid', 'success'].includes(message.paymentOrder.status))) && (
+          <UpiQrCard
+            order={message.paymentOrder}
+            onOpenPaymentModal={onOpenPaymentModal}
+            onPaymentSuccess={onPaymentSuccess}
+            onRequestNewLink={onRequestNewLink}
+          />
         )}
 
         {/* Payment Link Card Embed */}

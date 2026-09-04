@@ -61,13 +61,14 @@ export const PaymentLinkCard: React.FC<PaymentLinkCardProps> = ({
     return 300; // 5 minutes ephemeral lock
   };
 
-  const [timeLeft, setTimeLeft] = useState<number>(calculateRemainingSeconds);
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(calculateRemainingSeconds);
+  const timeLeft = countdownSeconds;
 
   useEffect(() => {
-    setTimeLeft(calculateRemainingSeconds());
+    setCountdownSeconds(calculateRemainingSeconds());
 
     const timer = setInterval(() => {
-      setTimeLeft(calculateRemainingSeconds());
+      setCountdownSeconds(calculateRemainingSeconds());
     }, 1000);
 
     return () => clearInterval(timer);

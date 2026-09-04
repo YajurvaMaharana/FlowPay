@@ -71,6 +71,7 @@ export function App() {
   const [cart, setCart] = useState<CartItem[]>([
     { product: PRODUCTS[0], quantity: 1 } // Preloaded with Apex ANC Pro
   ]);
+  const [sessionPurchasedItems, setSessionPurchasedItems] = useState<Product[]>([]);
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [couponCode, setCouponCode] = useState<string | undefined>(undefined);
   const [cartCalculation, setCartCalculation] = useState<CartCalculation>(() => {
@@ -268,6 +269,7 @@ export function App() {
         // --- STANDARD CONVERSATIONAL WORKFLOW ---
         const response = await processUserMessage(text, {
           cart,
+          purchasedItems: sessionPurchasedItems,
           userEmail: user.email,
           currency: 'INR',
           appliedDiscount,
@@ -598,6 +600,15 @@ export function App() {
   const handleSelectScenario = (scenario: TestScenario) => {
     setActiveScenario(scenario);
     setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
+    if (scenario.id === 'scen_ecosystem_cross_sell') {
+      const kbProduct = PRODUCTS.find(p => p.id === 'prod_keychron_mech') || PRODUCTS[1];
+      setSessionPurchasedItems(prev => {
+        if (!prev.some(p => p.id === kbProduct.id)) {
+          return [kbProduct, ...prev];
+        }
+        return prev;
+      });
+    }
     handleSendMessage(scenario.initialPrompt);
   };
 
@@ -622,6 +633,18 @@ export function App() {
     };
 
     setActivePaymentOrder(updated);
+
+    // Track purchased products in active session state for ecosystem memory
+    setSessionPurchasedItems((prev) => {
+      const newPurchased = order.items.map(item => item.product);
+      const combined = [...prev];
+      for (const p of newPurchased) {
+        if (!combined.some(existing => existing.id === p.id)) {
+          combined.push(p);
+        }
+      }
+      return combined;
+    });
 
     // Log transaction payload to Live Audit Panel
     const auditRecord: ToolCallEvent = {
@@ -713,6 +736,7 @@ export function App() {
 
   const handleResetSession = () => {
     setCart([{ product: PRODUCTS[0], quantity: 1 }]);
+    setSessionPurchasedItems([]);
     setAppliedDiscount(0);
     setCouponCode(undefined);
     setActiveScenario(null);
@@ -929,6 +953,7 @@ export function App() {
         isLoading={isLoading}
         activeScenario={activeScenario}
         cart={cart}
+        purchasedItems={sessionPurchasedItems}
         cartCalculation={cartCalculation}
         appliedDiscount={appliedDiscount}
         couponCode={couponCode}

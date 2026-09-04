@@ -1,8 +1,11 @@
 import { CartCalculation, CartItem, Message, PaymentOrder, Product, SecurityAlert, ToolCallEvent } from '../types';
 import { PRODUCTS } from '../data/products';
+import { evaluateEcosystemContext, TaggedEcosystemContext } from '../data/ecosystem';
 
 export interface AgentContext {
   cart: CartItem[];
+  purchasedItems?: Product[]; // Session State Purchase Tracker
+  ecosystemTags?: string[];
   userEmail: string;
   currency: string;
   appliedDiscount: number;
@@ -32,7 +35,9 @@ Behavioral Guidelines & Operational Protocols:
 3. Strict Concession Bounds: Maintain algorithmic yield discipline. Concessions are strictly capped at a maximum of 10%.
 4. Human-in-the-Loop Execution Gating: Always seek explicit user confirmation before committing payment actions.
 5. Ephemeral Payment Gateway Urgency Protocol:
-When generating a payment link, emphasize the strict 5-minute cryptographic gateway lock. Use this ephemeral window as a natural closing mechanism to drive conversion ('This Razorpay secure link and your 3% concession lock will expire in exactly 5 minutes. Shall I confirm your allocation?'). Every generated payment link is ephemeral, valid for exactly 300 seconds (5 minutes) before the session expires.`;
+When generating a payment link, emphasize the strict 5-minute cryptographic gateway lock. Use this ephemeral window as a natural closing mechanism to drive conversion ('This Razorpay secure link and your 3% concession lock will expire in exactly 5 minutes. Shall I confirm your allocation?'). Every generated payment link is ephemeral, valid for exactly 300 seconds (5 minutes) before the session expires.
+6. Contextual Cross-Sell Memory & Ecosystem Awareness:
+When the user asks a subsequent generic question or starts a new query later in the session, check the \`purchasedItems\` state. If they previously bought a core item, organically weave in a contextual recommendation for its compatible ecosystem accessory (e.g., 'Since you picked up the AeroType Carbon keyboard earlier, would you like to pair it with our hand-lubed artisan keycap set?'), proving you understand product ecosystems rather than executing blind searches.`;
 
 // 1. Zero-Trust PII Sanitizer
 export function sanitizePii(text: string): {
@@ -117,6 +122,12 @@ export function checkCatalogTool(category?: string, query?: string): {
     const hasPCTerm = rawTerms.some(t => ['pc', 'pcs', 'desktop', 'rig', 'prebuilt', 'workstation', 'computer', 'velox'].includes(t));
     const hasSSDTerm = rawTerms.some(t => ['ssd', 'ssds', 'storage', 'nvme', 'm.2', 'drive', 'disk', 'hyperdrive'].includes(t));
     const hasMonitorTerm = rawTerms.some(t => ['monitor', 'monitors', 'display', 'screen', 'ultrawide', 'curved', '4k', 'hdr', 'lumina'].includes(t));
+    const hasKeycapTerm = rawTerms.some(t => ['keycap', 'keycaps', 'artisan', 'cyberforge'].includes(t));
+    const hasCableTerm = rawTerms.some(t => ['cable', 'cables', 'coiled', 'aviator', 'aviation', 'vanguard'].includes(t));
+    const hasDeskmatTerm = rawTerms.some(t => ['deskmat', 'deskpad', 'mat', 'mousepad'].includes(t));
+    const hasSleeveTerm = rawTerms.some(t => ['sleeve', 'sleeves', 'case', 'cases', 'aeroshield', 'cover'].includes(t));
+    const hasDockTerm = rawTerms.some(t => ['dock', 'docks', 'hub', 'hubs', 'omniport', 'thunderbolt'].includes(t));
+    const hasStandTerm = rawTerms.some(t => ['stand', 'stands', 'riser', 'risers', 'gravityhold', 'ergoelevate', 'vertical'].includes(t));
 
     const scored = matched.map(p => {
       let score = 0;
@@ -137,6 +148,24 @@ export function checkCatalogTool(category?: string, query?: string): {
         score += 60;
       }
       if (hasMonitorTerm && (p.id === 'prod_lumina_monitor' || pTags.includes('monitor') || pTags.includes('display'))) {
+        score += 60;
+      }
+      if (hasKeycapTerm && (p.id === 'prod_artisan_keycaps' || pTags.includes('keycaps') || pTags.includes('artisan'))) {
+        score += 60;
+      }
+      if (hasCableTerm && (p.id === 'prod_coiled_cable' || pTags.includes('cable') || pTags.includes('coiled'))) {
+        score += 60;
+      }
+      if (hasDeskmatTerm && (p.id === 'prod_deskmat_pro' || pTags.includes('deskmat') || pTags.includes('mousepad'))) {
+        score += 60;
+      }
+      if (hasSleeveTerm && (p.id === 'prod_laptop_sleeve' || pTags.includes('sleeve') || pTags.includes('case'))) {
+        score += 60;
+      }
+      if (hasDockTerm && (p.id === 'prod_usbc_dock' || pTags.includes('dock') || pTags.includes('hub'))) {
+        score += 60;
+      }
+      if (hasStandTerm && (p.id === 'prod_vertical_stand' || p.id === 'prod_laptop_stand' || pTags.includes('stand') || pTags.includes('riser'))) {
         score += 60;
       }
 
@@ -874,7 +903,10 @@ export async function processUserMessage(
     };
   }
 
-  // Step 9: Persistent Context & Natural Cross-Sell
+  // Step 9: Persistent Context, Ecosystem Memory & Natural Cross-Sell
+  const ecosystemContext = evaluateEcosystemContext(context.purchasedItems || []);
+  const hasPurchasedItems = (context.purchasedItems && context.purchasedItems.length > 0) || false;
+
   const isLaptopQuery = /\b(laptop|laptops|notebook|notebooks|macbook|apexbook|novacore|ultrabook)\b/i.test(lowerText);
   const isPcQuery = /\b(pc|pcs|desktop|desktops|rig|rigs|prebuilt|pre-built|velox|workstation|tower)\b/i.test(lowerText);
   const isSsdQuery = /\b(ssd|ssds|nvme|m\.2|storage|hyperdrive|drive|drives|disk|disks|hard drive|gen4)\b/i.test(lowerText);
@@ -883,10 +915,89 @@ export async function processUserMessage(
   const isAudioQuery = /\b(headphone|headphones|earphone|audio|sound|music|anc|apex|dac|soundwave|amplifier)\b/i.test(lowerText);
   const isWatchQuery = /\b(watch|smartwatch|wearable|wearables|pulse|pulsewatch|strap|band)\b/i.test(lowerText);
   const isWorkspaceQuery = /\b(desk|mat|deskmat|mousepad|stand|riser|screenbar|light bar|cable)\b/i.test(lowerText);
+  const isAccessorySpecificQuery = /\b(keycap|keycaps|artisan|cable|cables|aviator|sleeve|sleeves|dock|docks|hub|hub|stand|vertical|riser)\b/i.test(lowerText);
+
+  const isGenericRecommendationQuery = 
+    /\b(recommend|recommendation|recommendations|suggest|suggestion|what else|what's next|what next|accessories|accessory|gear|complement|pair|setup|add on|addons)\b/i.test(lowerText) ||
+    (hasPurchasedItems && !isLaptopQuery && !isPcQuery && !isSsdQuery && !isMonitorQuery && !isKeyboardQuery && !isAudioQuery && !isWatchQuery && !isAccessorySpecificQuery);
 
   const hasExplicitHardwareIntent = 
     isLaptopQuery || isPcQuery || isSsdQuery || isMonitorQuery || 
-    isKeyboardQuery || isAudioQuery || isWatchQuery || isWorkspaceQuery;
+    isKeyboardQuery || isAudioQuery || isWatchQuery || isWorkspaceQuery || isAccessorySpecificQuery;
+
+  // If user previously purchased items and asks a generic question or accessory query, trigger Ecosystem Memory recommendation
+  if (hasPurchasedItems && ecosystemContext.compatibleAccessories.length > 0 && isGenericRecommendationQuery) {
+    const coreProduct = ecosystemContext.purchasedCoreProducts[0] || context.purchasedItems![0];
+    const topAccessory = ecosystemContext.compatibleAccessories[0];
+    const otherAccessories = ecosystemContext.compatibleAccessories.slice(1);
+
+    updatedCart = [{ product: topAccessory, quantity: 1 }];
+    appliedDiscount = 0;
+    couponCode = undefined;
+
+    const calcSingle = calculateCartTool(updatedCart, appliedDiscount, couponCode);
+    toolCalls.push(calcSingle.toolCall);
+
+    // Contextual cross-sell lead-in based on compatibility mapping
+    let organicPitch = '';
+    const isKeyboardCore = coreProduct.tags.includes('keyboard') || coreProduct.tags.includes('mechanical') || coreProduct.name.toLowerCase().includes('keyboard');
+    const isLaptopCore = coreProduct.tags.includes('laptop') || coreProduct.tags.includes('notebook') || coreProduct.name.toLowerCase().includes('laptop') || coreProduct.name.toLowerCase().includes('apexbook');
+
+    if (isKeyboardCore) {
+      organicPitch = `Since you picked up the **${coreProduct.name}** earlier, would you like to pair it with our **hand-lubed artisan keycap set**? We also have matching **coiled aviation cables** and **4mm topographic desk mats** engineered specifically for high-end mechanical keebs.`;
+    } else if (isLaptopCore) {
+      organicPitch = `Since you picked up the **${coreProduct.name}** workstation earlier, pairing it with our **AeroShield magnetic protective sleeve**, **OmniPort 12-in-1 Thunderbolt USB-C dock**, or **GravityHold vertical stand** completes your portable workstation setup.`;
+    } else {
+      organicPitch = `Since you picked up the **${coreProduct.name}** earlier, would you like to pair it with our **${topAccessory.name}**?`;
+    }
+
+    const accessoriesList = ecosystemContext.compatibleAccessories.map(acc => 
+      `• **${acc.name}** (₹${acc.price.toLocaleString('en-IN')}) — ${acc.tagline}`
+    ).join('\n');
+
+    const content = `Welcome back! I checked your active session ecosystem state.\n\n${organicPitch}\n\n` +
+      `🧩 **Compatible Ecosystem Accessories**:\n${accessoriesList}\n\n` +
+      `I've staged the **${topAccessory.name}** (₹${topAccessory.price.toLocaleString('en-IN')}) in your checkout queue. Would you like to proceed or bundle multiple accessories?`;
+
+    const message: Message = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      sender: 'agent',
+      content,
+      timestamp: new Date().toISOString(),
+      toolCalls,
+      securityAlerts,
+      suggestedProducts: ecosystemContext.compatibleAccessories,
+      ecosystemAwareness: {
+        purchasedCoreProduct: coreProduct.name,
+        compatibleAccessories: ecosystemContext.compatibleAccessories,
+        contextTags: ecosystemContext.contextTags,
+        recommendationNote: organicPitch
+      },
+      cartCalculation: calcSingle.calculation,
+      confirmationGated: true,
+      gatedAction: {
+        type: 'PROCEED_CHECKOUT',
+        label: `Proceed with ${topAccessory.name} (₹${calcSingle.calculation.total.toLocaleString('en-IN')})`,
+        items: updatedCart,
+        amount: calcSingle.calculation.total,
+        email: context.userEmail
+      },
+      quickReplies: [
+        `Add ${topAccessory.name.split(' ')[0]} (+₹${topAccessory.price.toLocaleString('en-IN')})`,
+        ...(otherAccessories[0] ? [`Add ${otherAccessories[0].name.split(' ')[0]} (+₹${otherAccessories[0].price.toLocaleString('en-IN')})`] : []),
+        'Apply 10% Discount',
+        'Explore All Accessories'
+      ]
+    };
+
+    return {
+      message,
+      updatedCart,
+      newSecurityAlerts: securityAlerts,
+      appliedDiscount: 0,
+      couponCode: undefined
+    };
+  }
 
   let categoryFilter: string | undefined = undefined;
   if (isLaptopQuery || isPcQuery || isSsdQuery || isMonitorQuery || isKeyboardQuery || lowerText.includes('computing')) {
@@ -895,7 +1006,7 @@ export async function processUserMessage(
     categoryFilter = 'audio';
   } else if (isWatchQuery) {
     categoryFilter = 'wearables';
-  } else if (isWorkspaceQuery) {
+  } else if (isWorkspaceQuery || isAccessorySpecificQuery) {
     categoryFilter = 'workspace';
   }
 
@@ -944,18 +1055,27 @@ export async function processUserMessage(
     ? Object.entries(primaryProduct.specs).slice(0, 4).map(([k, v]) => `• **${k}**: ${v}`).join('\n')
     : '';
 
+  // Organic ecosystem note if user has previous purchases
+  let ecosystemLeadIn = '';
+  if (hasPurchasedItems && ecosystemContext.purchasedCoreProducts.length > 0) {
+    const prevCore = ecosystemContext.purchasedCoreProducts[0];
+    ecosystemLeadIn = `\n\n💡 **Ecosystem Synergy**: Because you previously picked up the **${prevCore.name}**, this hardware seamlessly integrates into your active setup.`;
+  }
+
   const content = isContextRetained
     ? `Regarding the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}):\n\n` +
       `✨ **Key Highlights**:\n` +
       primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
       (specsList ? `📋 **Technical Specifications**:\n${specsList}\n\n` : '') +
       (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` : '') +
+      ecosystemLeadIn +
       `\n\nWould you like to proceed directly with the ${primaryProduct.name}?`
     : `Hello! I found the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}) in our hardware catalog. ${primaryProduct.description}\n\n` +
       `✨ **Key Highlights**:\n` +
       primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
       (specsList ? `📋 **Technical Specifications**:\n${specsList}\n\n` : '') +
       (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` : '') +
+      ecosystemLeadIn +
       `\n\nI have loaded the **${primaryProduct.name}** into your active cart. Would you like to proceed to checkout or configure companions?`;
 
   const message: Message = {
@@ -967,6 +1087,12 @@ export async function processUserMessage(
     securityAlerts,
     suggestedProducts: [primaryProduct, ...(crossSellProduct ? [crossSellProduct] : [])],
     crossSellOffer,
+    ecosystemAwareness: hasPurchasedItems && ecosystemContext.compatibleAccessories.length > 0 ? {
+      purchasedCoreProduct: ecosystemContext.purchasedCoreProducts[0]?.name || 'Previous Purchase',
+      compatibleAccessories: ecosystemContext.compatibleAccessories,
+      contextTags: ecosystemContext.contextTags,
+      recommendationNote: ecosystemContext.primaryOrganicPrompt
+    } : undefined,
     cartCalculation: calcSingle.calculation,
     confirmationGated: true,
     gatedAction: {

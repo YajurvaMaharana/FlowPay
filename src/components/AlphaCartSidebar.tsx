@@ -22,6 +22,7 @@ interface AlphaCartSidebarProps {
   isLoading: boolean;
   activeScenario: TestScenario | null;
   cart: CartItem[];
+  purchasedItems?: Product[];
   cartCalculation: CartCalculation;
   appliedDiscount: number;
   couponCode?: string;
@@ -61,6 +62,7 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
   isLoading,
   activeScenario,
   cart,
+  purchasedItems,
   cartCalculation,
   appliedDiscount,
   couponCode,
@@ -346,6 +348,7 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
               isLoading={isLoading}
               activeScenario={activeScenario}
               cart={cart}
+              purchasedItems={purchasedItems}
               cartCalculation={cartCalculation}
               appliedDiscount={appliedDiscount}
               couponCode={couponCode}

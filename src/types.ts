@@ -120,6 +120,12 @@ export interface Message {
     savings: number;
     bundleTotal: number;
   };
+  ecosystemAwareness?: {
+    purchasedCoreProduct: string;
+    compatibleAccessories: Product[];
+    contextTags: string[];
+    recommendationNote: string;
+  };
   cartCalculation?: CartCalculation;
   quickReplies?: string[];
   confirmationGated?: boolean;

@@ -76,5 +76,20 @@ export const TEST_SCENARIOS: TestScenario[] = [
       'Security boundary triggered (`OUT_OF_DOMAIN_REQUEST`)',
       'Agent declines and offers relevant audio/computing gear instead'
     ]
+  },
+  {
+    id: 'scen_ecosystem_cross_sell',
+    title: '6. Contextual Cross-Sell Memory & Ecosystem Awareness',
+    category: 'standard',
+    badge: 'Ecosystem Memory',
+    description: 'Agent checks session purchase state (e.g. AeroType Carbon keyboard or ApexBook Pro laptop) and organically recommends compatible artisan keycaps, coiled cables, or USB-C docks.',
+    initialPrompt: 'I purchased the AeroType Carbon mechanical keyboard earlier in this session. What accessories or gear do you recommend to complete my setup?',
+    expectedOutcome: 'Agent checks purchasedItems session state, matches mechanical keyboard compatibility mapping, and organically weaves in contextual recommendations for CyberForge artisan keycaps, Vanguard coiled aviation cable, and DeskMat Pro.',
+    steps: [
+      'Session purchase tracker records prior purchase (AeroType Carbon Keyboard)',
+      'Ecosystem compatibility mapping tags matching accessories: artisan keycaps, coiled cables, desk mats',
+      'Agent organically pitches: "Since you picked up the AeroType Carbon keyboard earlier, would you like to pair it with our hand-lubed artisan keycap set?"',
+      'Stages artisan keycaps for 1-click checkout with companion accessories'
+    ]
   }
 ];

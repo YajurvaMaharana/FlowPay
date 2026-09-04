@@ -13,6 +13,7 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   activeScenario: TestScenario | null;
   cart: CartItem[];
+  purchasedItems?: Product[];
   cartCalculation: CartCalculation;
   appliedDiscount: number;
   couponCode?: string;
@@ -41,6 +42,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading,
   activeScenario,
   cart,
+  purchasedItems = [],
   cartCalculation,
   appliedDiscount,
   couponCode,
@@ -236,6 +238,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               Reset Test
             </button>
           )}
+        </div>
+      )}
+
+      {/* Ecosystem Memory Active Session State Indicator */}
+      {purchasedItems && purchasedItems.length > 0 && (
+        <div className="px-4 py-2 bg-neutral-900/90 border-b border-neutral-800 flex items-center justify-between text-xs text-neutral-300 shrink-0">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Sparkles className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+            <span className="text-[11px] text-neutral-400 font-mono">Ecosystem Context Active:</span>
+            <span className="text-[11px] font-semibold text-white truncate max-w-[180px]">
+              {purchasedItems.map(p => p.name).join(', ')}
+            </span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-300 font-mono shrink-0 border border-neutral-700">
+            {purchasedItems.length} purchased
+          </span>
         </div>
       )}
 
