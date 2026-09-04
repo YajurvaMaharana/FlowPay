@@ -49,18 +49,18 @@ export const TEST_SCENARIOS: TestScenario[] = [
     ]
   },
   {
-    id: 'scen_payment_failure_recovery',
-    title: '4. Payment Gateway Failure & UPI Fallback',
+    id: 'scen_bank_decline_simulation',
+    title: '4. Simulate Bank Decline & Graceful Recovery',
     category: 'failure',
-    badge: 'Payment Recovery',
-    description: 'Simulates a bank payment decline webhook on Razorpay, triggering AlphaCart to apologize and switch seamlessly to UPI.',
-    initialPrompt: 'I tried paying for the Apex ANC bundle but my credit card payment failed at the gateway with code "BANK_DECLINED". What do I do?',
-    expectedOutcome: 'Agent executes `handle_payment_failure`, apologizes politely, and provides 1-click fallback to UPI (GPay, PhonePe, Paytm QR) or alternate card.',
+    badge: 'Bank Decline',
+    description: 'Simulates a real-time bank decline event on the Razorpay gateway, triggering AlphaCart to apologize, hold cart/discounts for 15 mins, and provide UPI & card retry buttons.',
+    initialPrompt: 'Payment failed on Razorpay gateway: BANK_DECLINED_CARD_ISSUER. Transaction declined by card issuer.',
+    expectedOutcome: 'Agent immediately executes `handle_payment_failure` event, issues an apology, confirms 15-minute cart & discount hold, and presents UPI QR / alternate card retry buttons.',
     steps: [
-      'Gateway failure message is detected in context',
-      'Agent calls `handle_payment_failure` with order reference',
-      'Offers instant UPI QR scan or alternate payment method',
-      'User completes transaction seamlessly via UPI'
+      'Bank decline error payload is injected into context',
+      'Agent triggers `handle_payment_failure` with cart held state',
+      'Apologizes for the bank decline and reassures inventory is held for 15 mins',
+      'Provides one-click fallback for UPI QR and alternate card payment'
     ]
   },
   {

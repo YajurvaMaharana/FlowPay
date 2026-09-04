@@ -246,6 +246,12 @@ export function generatePaymentTool(params: {
   const linkId = `plink_${Math.random().toString(36).substring(2, 10)}`;
   const shortUrl = `https://rzp.io/i/${linkId}`;
   
+  // Convert INR amount to paise (INR * 100)
+  const amountInPaise = Math.round(calculation.total * 100);
+
+  // Expiry timestamp (15 minutes from now)
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  
   // UPI Deep Link payload for instant scan & pay simulation
   const upiUri = `upi://pay?pa=flowpay.merchant@hdfcbank&pn=FlowPay%20Store&am=${calculation.total}&cu=INR&tr=${orderId}&tn=FlowPay%20Order%20${orderId}`;
 
@@ -259,11 +265,13 @@ export function generatePaymentTool(params: {
     discountAmount: calculation.discountAmount,
     tax: calculation.tax,
     totalAmount: calculation.total,
+    amountInPaise,
     currency: calculation.currency,
     customerEmail,
     customerName: customerName || 'Valued Customer',
     status: 'created',
     createdAt: new Date().toISOString(),
+    expiresAt,
     receiptNumber: `REC-${Date.now().toString().slice(-6)}`
   };
 
@@ -272,16 +280,20 @@ export function generatePaymentTool(params: {
     name: 'generate_payment',
     input: {
       customer_email: customerEmail,
-      amount: calculation.total,
+      amount_inr: calculation.total,
+      amount_paise: amountInPaise,
       currency: calculation.currency,
-      itemCount: items.length
+      itemCount: items.length,
+      discount_applied: `${calculation.discountPercentage}%`
     },
     output: {
       orderId: order.orderId,
       razorpayPaymentLinkId: order.razorpayPaymentLinkId,
       razorpayShortUrl: order.razorpayShortUrl,
-      totalAmount: order.totalAmount,
+      amount_in_inr: order.totalAmount,
+      amount_in_paise: amountInPaise,
       currency: order.currency,
+      expires_at: expiresAt,
       status: 'created'
     },
     status: 'success',
@@ -298,11 +310,24 @@ export function handlePaymentFailureTool(orderId: string, failureReason: string)
   return {
     id: `tool_${Date.now()}_fail`,
     name: 'handle_payment_failure',
-    input: { orderId, failureReason },
+    input: {
+      orderId,
+      event: 'payment.failed',
+      failureReason,
+      error_code: 'BANK_DECLINED_CARD_ISSUER',
+      cart_held_minutes: 15
+    },
     output: {
       status: 'failure_acknowledged',
-      recommendedFallback: ['UPI_INTENT', 'UPI_QR_SCAN', 'ALTERNATE_CARD_3DS'],
-      retryAvailable: true
+      cart_state: 'HELD_15_MINUTES',
+      discounts_preserved: true,
+      recommendedFallback: ['UPI_QR_SCAN', 'UPI_INTENT_GPAY', 'ALTERNATE_CARD_3DS'],
+      retryAvailable: true,
+      recovery_actions: [
+        'Render instant UPI QR Code',
+        'Enable 1-Click Alternate Card Retry',
+        'Hold discounted inventory for 15 minutes'
+      ]
     },
     status: 'success',
     timestamp: new Date().toISOString()
@@ -460,7 +485,7 @@ export async function processUserMessage(
     const message: Message = {
       id: `msg_${Date.now()}`,
       sender: 'agent',
-      content: `I am **AlphaCart**, specialized exclusively in helping you find high-performance audio, computing, and workspace tech from our merchant catalog.\n\nI cannot write external scripts or execute outside tools, but I can help you find gear like studio monitors, mechanical keyboards, audiophile DACs, or smartwatches. What tech gear are you exploring today?`,
+      content: `I am **Veluno Concierge**, specialized exclusively in helping you find high-performance audio, computing, and workspace tech from our merchant catalog.\n\nI cannot write external scripts or execute outside tools, but I can help you find gear like studio monitors, mechanical keyboards, audiophile DACs, or smartwatches. What tech gear are you exploring today?`,
       timestamp: new Date().toISOString(),
       toolCalls: [],
       securityAlerts,
@@ -474,8 +499,11 @@ export async function processUserMessage(
   const isFailureSignal = 
     lowerText.includes('failed') || 
     lowerText.includes('bank_declined') || 
+    lowerText.includes('bank decline') ||
+    lowerText.includes('decline') ||
     lowerText.includes('payment decline') ||
     lowerText.includes('transaction failed') ||
+    lowerText.includes('simulate bank decline') ||
     lowerText.includes('error paying');
 
   if (isFailureSignal) {
@@ -487,20 +515,20 @@ export async function processUserMessage(
       updatedOrder = {
         ...context.lastGeneratedOrder,
         status: 'failed',
-        failureReason: 'Bank declined credit card transaction. Gateway timeout or issuer decline.'
+        failureReason: 'Bank declined credit card transaction. Issuer timeout or 3D Secure verification decline.'
       };
     }
 
     const message: Message = {
       id: `msg_${Date.now()}`,
       sender: 'agent',
-      content: `I'm very sorry to hear your card transaction did not go through! Payment gateways occasionally experience card issuer timeouts or 3D Secure verification drops.\n\nWould you like to try **Instant UPI (Google Pay, PhonePe, Paytm)** via QR scan, or switch to an **alternate credit/debit card**? UPI transactions have a 99.4% instant success rate on our platform.`,
+      content: `I'm very sorry for the inconvenience — your bank card transaction was declined by the card issuer.\n\n🔒 **Don't worry**: Your cart items and applied **10% special discount are securely held for the next 15 minutes** so you won't lose your reserved inventory.\n\nWould you like to complete checkout using **Instant UPI QR (Google Pay / PhonePe / Paytm)** or retry with an **alternate credit or debit card**?`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
       isFailureRecovery: true,
       paymentOrder: updatedOrder,
-      quickReplies: ['Pay via UPI (GPay / PhonePe)', 'Try Another Card', 'Retry Razorpay Link']
+      quickReplies: ['Retry with UPI QR Code', 'Retry with Alternate Card', 'Open Razorpay Link']
     };
 
     return {
@@ -581,21 +609,22 @@ export async function processUserMessage(
       if (!exists) {
         updatedCart.push({ product: crossSellItem, quantity: 1 });
       }
-      appliedDiscount = 10; // Bundle discount 10%
-      couponCode = 'BUNDLE10';
+      // No flat bundle discount to optimize merchant yield
     }
 
     const calcResult = calculateCartTool(updatedCart, appliedDiscount, couponCode);
     toolCalls.push(calcResult.toolCall);
     securityAlerts.push(...calcResult.securityAlerts);
 
+    let discountContent = appliedDiscount > 0 ? ` (with your ${appliedDiscount}% concession applied)` : '';
+
     const message: Message = {
       id: `msg_${Date.now()}`,
       sender: 'agent',
-      content: `Awesome choice! I've added **${crossSellItem?.name || 'the bundle companion'}** to your cart and applied the **10% Bundle Savings** (` + `${couponCode}).\n\n` +
+      content: `Awesome choice! I've added **${crossSellItem?.name || 'the companion item'}** to your cart${discountContent}.\n\n` +
         `• **Items**: ${updatedCart.map(i => `${i.product.name} (x${i.quantity})`).join(' + ')}\n` +
         `• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n` +
-        `• Bundle Discount (10%): -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n` +
+        (appliedDiscount > 0 ? `• Concession (${appliedDiscount}%): -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n` : '') +
         `• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n` +
         `• **Total Amount: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\n` +
         `Would you like me to proceed and generate your secure checkout link?`,
@@ -623,32 +652,60 @@ export async function processUserMessage(
     };
   }
 
-  // Step 8: Coupon Application (with 10% Maximum limit check)
-  if (lowerText.includes('coupon') || lowerText.includes('promo') || lowerText.includes('save') || lowerText.includes('discount')) {
-    let reqDiscount = 10;
+  // Step 8: Algorithmic Yield Negotiation (Market Maker Persona)
+  const isChangingProduct = lowerText.includes('show me cheaper options') || lowerText.includes('change product') || lowerText.includes('cheaper alternative') || lowerText.includes('different');
+
+  const isNegotiating = !isChangingProduct && (lowerText.includes('discount') || lowerText.includes('better price') || lowerText.includes('expensive') || lowerText.includes('too much') || lowerText.includes('abandon') || lowerText.includes('cheaper') || lowerText.includes('out of budget') || lowerText.includes('lower price') || lowerText.includes('offer') || lowerText.includes('coupon') || lowerText.includes('promo') || lowerText.includes('save') || lowerText.includes('cancel') || lowerText.includes('leave') || lowerText.includes('last offer') || lowerText.includes('best price') || lowerText.includes('competitor'));
+
+  if (isNegotiating) {
+    let reqDiscount = 0;
     if (lowerText.includes('20') || lowerText.includes('save20')) reqDiscount = 20;
     if (lowerText.includes('50') || lowerText.includes('hack50')) reqDiscount = 50;
+    if (lowerText.includes('100') || lowerText.includes('free')) reqDiscount = 100;
 
-    if (updatedCart.length === 0) {
+    const isHardNegotiation = lowerText.includes('cancel') || lowerText.includes('leave') || lowerText.includes('abandon') || lowerText.includes('last offer') || lowerText.includes('best price') || lowerText.includes('competitor');
+
+    if (isHardNegotiation || reqDiscount > 10) {
+        if (appliedDiscount < 10) {
+            appliedDiscount = 10;
+            couponCode = 'MAX_YIELD_SAVE10';
+        }
+    } else {
+        if (appliedDiscount === 0) {
+            // Dynamic soft concession between 2% and 5%
+            const softConcession = Math.floor(Math.random() * 4) + 2; 
+            appliedDiscount = softConcession;
+            couponCode = `SOFT_SAVE${softConcession}`;
+        } else if (appliedDiscount < 10) {
+            appliedDiscount = Math.min(10, appliedDiscount + 3);
+            couponCode = `YIELD_SAVE${appliedDiscount}`;
+        }
+    }
+
+    if (updatedCart.length === 0 && context.cart.length > 0) {
+      updatedCart = [...context.cart];
+    } else if (updatedCart.length === 0) {
       const defaultItem = PRODUCTS[0];
       updatedCart = [{ product: defaultItem, quantity: 1 }];
     }
 
-    const calcResult = calculateCartTool(updatedCart, reqDiscount, `PROMO_${reqDiscount}`);
+    const calcResult = calculateCartTool(updatedCart, appliedDiscount, couponCode);
     toolCalls.push(calcResult.toolCall);
     securityAlerts.push(...calcResult.securityAlerts);
     appliedDiscount = calcResult.calculation.discountPercentage;
     couponCode = calcResult.calculation.couponCode;
 
-    let explanation = `Applied coupon **${couponCode}** for a **${appliedDiscount}% discount**!`;
-    if (calcResult.calculation.securityDiscountCapped) {
-      explanation = `⚠️ **Merchant Policy Notice**: You requested a ${reqDiscount}% discount, but our platform enforces a strict maximum cap of **10%** per transaction. I have applied the maximum allowable **10% discount** (` + `${couponCode}).`;
+    let explanation = `I completely understand your budget concerns. To help you out, I've immediately applied a **${appliedDiscount}% soft concession** (Code: ${couponCode}) to your active item to bring the price down for you.`;
+    if (appliedDiscount === 10 && (isHardNegotiation || reqDiscount > 10)) {
+      explanation = `I hear you. To ensure we don't lose your business today, I am deploying my maximum authorized market-maker concession of **10%** (Code: ${couponCode}). This is our absolute best price.`;
+    } else if (calcResult.calculation.securityDiscountCapped) {
+      explanation = `⚠️ **Merchant Policy Notice**: You requested a higher discount, but my algorithmic bounds strictly cap maximum yield concession at **10%** per transaction. I have applied the maximum **10% discount** (${couponCode}).`;
     }
 
     const message: Message = {
       id: `msg_${Date.now()}`,
       sender: 'agent',
-      content: `${explanation}\n\n• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n• Discount (${appliedDiscount}%): -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n• **New Total: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\nShall I proceed with checkout confirmation?`,
+      content: `${explanation}\n\n• Subtotal: ₹${calcResult.calculation.subtotal.toLocaleString('en-IN')}\n• Discount (${appliedDiscount}%): -₹${calcResult.calculation.discountAmount.toLocaleString('en-IN')}\n• GST (18%): ₹${calcResult.calculation.tax.toLocaleString('en-IN')}\n• **New Total: ₹${calcResult.calculation.total.toLocaleString('en-IN')}**\n\nDoes this updated price work for you to confirm the order?`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
@@ -661,7 +718,7 @@ export async function processUserMessage(
         amount: calcResult.calculation.total,
         email: context.userEmail
       },
-      quickReplies: ['Yes, checkout now', 'Add more items', 'View Specs']
+      quickReplies: ['Yes, checkout now', 'Still too expensive', 'Review Cart']
     };
 
     return {
@@ -673,7 +730,7 @@ export async function processUserMessage(
     };
   }
 
-  // Step 9: Standard Discovery & Natural Cross-Sell (Workflows #1, #2, #3, #4)
+  // Step 9: Persistent Context & Natural Cross-Sell
   let categoryFilter: string | undefined = undefined;
   if (lowerText.includes('headphone') || lowerText.includes('audio') || lowerText.includes('music') || lowerText.includes('noise') || lowerText.includes('anc')) {
     categoryFilter = 'audio';
@@ -685,22 +742,35 @@ export async function processUserMessage(
     categoryFilter = 'workspace';
   }
 
-  const catalogResult = checkCatalogTool(categoryFilter, cleanText);
-  toolCalls.push(catalogResult.toolCall);
+  const isContextRetained = context.cart.length > 0 && !isChangingProduct && !categoryFilter;
+  let primaryProduct: Product;
+  let crossSellProduct: Product | undefined;
 
-  const primaryProduct = catalogResult.items[0] || PRODUCTS[0];
-  const crossSellProduct = primaryProduct.crossSellProductId
-    ? PRODUCTS.find(p => p.id === primaryProduct.crossSellProductId)
-    : PRODUCTS.find(p => p.id !== primaryProduct.id);
+  if (isContextRetained) {
+    primaryProduct = context.cart[0].product;
+    crossSellProduct = primaryProduct.crossSellProductId
+      ? PRODUCTS.find(p => p.id === primaryProduct.crossSellProductId)
+      : PRODUCTS.find(p => p.id !== primaryProduct.id);
+  } else {
+    const catalogResult = checkCatalogTool(categoryFilter, cleanText);
+    toolCalls.push(catalogResult.toolCall);
+    
+    primaryProduct = catalogResult.items[0] || PRODUCTS[0];
+    crossSellProduct = primaryProduct.crossSellProductId
+      ? PRODUCTS.find(p => p.id === primaryProduct.crossSellProductId)
+      : PRODUCTS.find(p => p.id !== primaryProduct.id);
 
-  // Set cart to primary item
-  updatedCart = [{ product: primaryProduct, quantity: 1 }];
+    // Update cart since we are pivoting to a new item
+    updatedCart = [{ product: primaryProduct, quantity: 1 }];
+    appliedDiscount = 0;
+    couponCode = undefined;
+  }
 
   // Calculate pricing for primary + potential cross sell
-  const calcSingle = calculateCartTool(updatedCart, 0);
+  const calcSingle = calculateCartTool(updatedCart, appliedDiscount, couponCode);
   toolCalls.push(calcSingle.toolCall);
 
-  const bundleDiscount = 10;
+  const bundleDiscount = 0;
   const bundleSubtotal = primaryProduct.price + (crossSellProduct ? crossSellProduct.price : 0);
   const bundleSavings = Math.round((bundleSubtotal * bundleDiscount) / 100);
   const bundleTotal = Math.round((bundleSubtotal - bundleSavings) * 1.18); // with GST
@@ -713,13 +783,18 @@ export async function processUserMessage(
     bundleTotal
   } : undefined;
 
-  const content = `Hello! I'd love to help you find the ideal tech gear.\n\n` +
-    `I recommend the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}). ${primaryProduct.description}\n\n` +
-    `✨ **Key Highlights**:\n` +
-    primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
-    (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` +
-    `If bundled together today, you get **10% Off the bundle** (Save ₹${bundleSavings.toLocaleString('en-IN')})!` : '') +
-    `\n\nWould you like to add the bundle or proceed directly with the ${primaryProduct.name}?`;
+  const content = isContextRetained
+    ? `Regarding the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}):\n\n` +
+      `✨ **Key Highlights**:\n` +
+      primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
+      (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` : '') +
+      `\n\nWould you like to proceed directly with the ${primaryProduct.name}?`
+    : `Hello! I'd love to help you find the ideal tech gear.\n\n` +
+      `I recommend the **${primaryProduct.name}** (₹${primaryProduct.price.toLocaleString('en-IN')}). ${primaryProduct.description}\n\n` +
+      `✨ **Key Highlights**:\n` +
+      primaryProduct.features.map(f => `• ${f}`).join('\n') + `\n\n` +
+      (crossSellProduct ? `💡 **Recommended Companion**: ${primaryProduct.crossSellReason || `Add the **${crossSellProduct.name}** to get the best experience.`}\n` : '') +
+      `\n\nWould you like to add the bundle or proceed directly with the ${primaryProduct.name}?`;
 
   const message: Message = {
     id: `msg_${Date.now()}`,
@@ -751,7 +826,7 @@ export async function processUserMessage(
     message,
     updatedCart,
     newSecurityAlerts: securityAlerts,
-    appliedDiscount: 0,
-    couponCode: undefined
+    appliedDiscount: isContextRetained ? appliedDiscount : 0,
+    couponCode: isContextRetained ? couponCode : undefined
   };
 }

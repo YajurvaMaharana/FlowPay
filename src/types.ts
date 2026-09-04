@@ -52,11 +52,13 @@ export interface PaymentOrder {
   discountAmount: number;
   tax: number;
   totalAmount: number;
+  amountInPaise?: number;
   currency: string;
   customerEmail: string;
   customerName?: string;
   status: PaymentStatus;
   createdAt: string;
+  expiresAt?: string;
   paidAt?: string;
   paymentMethod?: 'upi' | 'card' | 'netbanking' | 'wallet';
   failureReason?: string;
@@ -71,6 +73,7 @@ export interface ToolCallEvent {
   output: Record<string, any>;
   status: 'executing' | 'success' | 'blocked' | 'failed';
   timestamp: string;
+  executionTimeMs?: number;
   executionGatePassed?: boolean;
   securityNote?: string;
 }
@@ -128,6 +131,7 @@ export interface SecurityMetrics {
   discountLimitsEnforced: number;
   gatedConfirmationsEnforced: number;
   zeroTrustStatus: 'OPTIMAL' | 'ELEVATED_THREAT' | 'ACTIVE_DEFENSE';
+  yieldRetained: number;
 }
 
 export interface TestScenario {
@@ -139,4 +143,28 @@ export interface TestScenario {
   initialPrompt: string;
   expectedOutcome: string;
   steps: string[];
+}
+
+export type NavigationTab = 'home' | 'shop' | 'new-arrivals' | 'about' | 'contact';
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  isAuthenticated: boolean;
+  savedGearIds: string[];
+  orders: PaymentOrder[];
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+  preferences: {
+    piiStrictMasking: boolean;
+    autoApplyMaxDiscount: boolean;
+    currency: string;
+  };
 }

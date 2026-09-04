@@ -120,39 +120,39 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   return (
-    <div id="razorpay-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+    <div id="razorpay-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-sm animate-fadeIn">
       <div 
         id="razorpay-modal-container" 
-        className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-lg rounded-2xl bg-neutral-900 border border-neutral-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div className="px-5 py-4 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow">
+            <div className="w-8 h-8 rounded-lg bg-neutral-600 flex items-center justify-center text-white font-bold text-sm shadow">
               ₹
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-display font-bold text-base text-white">FlowPay Store</h3>
-                <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-950 text-green-300 border border-green-800/60 font-mono">
                   Razorpay Live
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">{order.customerEmail}</p>
+              <p className="text-xs text-neutral-400 font-mono">{order.customerEmail}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <span className="text-[10px] text-slate-400">Total Amount</span>
-              <div className="text-base font-bold text-emerald-400 font-display">
+              <span className="text-[10px] text-neutral-400">Total Amount</span>
+              <div className="text-base font-bold text-green-400 font-display">
                 ₹{order.totalAmount.toLocaleString('en-IN')}
               </div>
             </div>
             <button
               id="btn-close-razorpay-modal"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -162,43 +162,43 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Step: Success Screen */}
         {step === 'success' && (
           <div className="p-8 text-center space-y-5 animate-scaleUp">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-900/30">
+            <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 text-green-400 flex items-center justify-center mx-auto shadow-lg shadow-green-900/30">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
             <div className="space-y-1">
               <h4 className="text-xl font-bold font-display text-white">Payment Successful!</h4>
-              <p className="text-sm text-slate-300">
-                Transaction ID: <span className="font-mono text-emerald-300">pay_flw_{order.orderId.slice(-8)}</span>
+              <p className="text-sm text-neutral-300">
+                Transaction ID: <span className="font-mono text-green-300">pay_flw_{order.orderId.slice(-8)}</span>
               </p>
-              <p className="text-xs text-slate-400">
-                An official receipt has been emailed to <span className="text-slate-200">{order.customerEmail}</span>
+              <p className="text-xs text-neutral-400">
+                An official receipt has been emailed to <span className="text-neutral-200">{order.customerEmail}</span>
               </p>
             </div>
 
-            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-left space-y-2 text-xs">
-              <div className="flex justify-between text-slate-400">
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 text-left space-y-2 text-xs">
+              <div className="flex justify-between text-neutral-400">
                 <span>Merchant</span>
-                <span className="text-slate-200 font-semibold">FlowPay Technologies Ltd.</span>
+                <span className="text-neutral-200 font-semibold">FlowPay Technologies Ltd.</span>
               </div>
-              <div className="flex justify-between text-slate-400">
+              <div className="flex justify-between text-neutral-400">
                 <span>Amount Paid</span>
-                <span className="text-emerald-400 font-bold">₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                <span className="text-green-400 font-bold">₹{order.totalAmount.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between text-slate-400">
+              <div className="flex justify-between text-neutral-400">
                 <span>Payment Mode</span>
-                <span className="text-slate-200 uppercase">{activeTab}</span>
+                <span className="text-neutral-200 uppercase">{activeTab}</span>
               </div>
-              <div className="flex justify-between text-slate-400">
+              <div className="flex justify-between text-neutral-400">
                 <span>Order Reference</span>
-                <span className="text-slate-200 font-mono">{order.orderId}</span>
+                <span className="text-neutral-200 font-mono">{order.orderId}</span>
               </div>
             </div>
 
             <button
               id="btn-done-payment-success"
               onClick={onClose}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-all shadow-lg shadow-emerald-900/40"
+              className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold text-sm transition-all shadow-lg shadow-green-900/40"
             >
               Return to Chat & Store
             </button>
@@ -208,17 +208,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Step: Failed Screen */}
         {step === 'failed' && (
           <div className="p-6 text-center space-y-4 animate-scaleUp">
-            <div className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 flex items-center justify-center mx-auto">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 border-2 border-red-500 text-red-400 flex items-center justify-center mx-auto">
               <AlertCircle className="w-8 h-8" />
             </div>
 
             <div className="space-y-1">
               <h4 className="text-lg font-bold font-display text-white">Payment Declined by Bank</h4>
-              <p className="text-xs text-rose-300 font-mono p-2 rounded bg-rose-950/40 border border-rose-800/40">
+              <p className="text-xs text-red-300 font-mono p-2 rounded bg-red-950/40 border border-red-800/40">
                 {failureReason}
               </p>
-              <p className="text-xs text-slate-400 pt-1">
-                AlphaCart AI agent is ready to assist you with an instant UPI switch or alternate card!
+              <p className="text-xs text-neutral-400 pt-1">
+                Veluno AI agent is ready to assist you with an instant UPI switch or alternate card!
               </p>
             </div>
 
@@ -229,7 +229,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   setActiveTab('upi');
                   setStep('form');
                 }}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2.5 rounded-xl bg-neutral-600 hover:bg-neutral-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
               >
                 <Smartphone className="w-4 h-4" />
                 <span>Switch to Instant UPI (GPay / PhonePe)</span>
@@ -238,7 +238,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 id="btn-close-failure-modal"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+                className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-semibold text-xs transition-colors"
               >
                 Ask Agent in Chat for Help
               </button>
@@ -249,11 +249,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Step: Processing State */}
         {step === 'processing' && (
           <div className="p-12 text-center space-y-4">
-            <Loader2 className="w-12 h-12 text-indigo-400 animate-spin mx-auto" />
+            <Loader2 className="w-12 h-12 text-neutral-400 animate-spin mx-auto" />
             <div className="space-y-1">
               <h4 className="text-base font-bold text-white font-display">Authorizing Transaction...</h4>
-              <p className="text-xs text-slate-400">Connecting securely to Razorpay 256-bit bank gateway</p>
-              <p className="text-[11px] text-indigo-300">Please do not refresh or close this window.</p>
+              <p className="text-xs text-neutral-400">Connecting securely to Razorpay 256-bit bank gateway</p>
+              <p className="text-[11px] text-neutral-300">Please do not refresh or close this window.</p>
             </div>
           </div>
         )}
@@ -261,16 +261,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Step: 3D Secure / OTP Simulation */}
         {step === 'otp' && (
           <div className="p-6 space-y-4">
-            <div className="p-3 rounded-xl bg-indigo-950/60 border border-indigo-800/50 flex items-center justify-between text-xs">
+            <div className="p-3 rounded-xl bg-neutral-950/60 border border-neutral-800/50 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                <span className="font-semibold text-indigo-200">Bank 3D Secure Verification</span>
+                <ShieldCheck className="w-4 h-4 text-neutral-400" />
+                <span className="font-semibold text-neutral-200">Bank 3D Secure Verification</span>
               </div>
-              <span className="font-mono text-indigo-300">{formatTime(countdown)}</span>
+              <span className="font-mono text-neutral-300">{formatTime(countdown)}</span>
             </div>
 
             <div className="space-y-2 text-center py-2">
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-neutral-300">
                 A 6-digit one-time password (OTP) was sent to your registered mobile ending in <strong className="text-white">••89</strong>
               </p>
               <div className="flex justify-center">
@@ -279,24 +279,24 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  className="w-48 text-center text-xl tracking-widest font-mono font-bold px-3 py-2 rounded-xl bg-slate-950 border border-indigo-500/50 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-48 text-center text-xl tracking-widest font-mono font-bold px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-500/50 text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 />
               </div>
-              <p className="text-[10px] text-slate-500">Test OTP pre-filled: 847291</p>
+              <p className="text-[10px] text-neutral-500">Test OTP pre-filled: 847291</p>
             </div>
 
             <div className="flex gap-2">
               <button
                 id="btn-submit-otp"
                 onClick={handleVerifyOtp}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold text-xs transition-colors"
               >
                 Verify & Complete Payment
               </button>
               <button
                 id="btn-cancel-otp"
                 onClick={() => setStep('form')}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs"
               >
                 Cancel
               </button>
@@ -308,14 +308,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {step === 'form' && (
           <div className="flex-1 flex flex-col overflow-y-auto">
             {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-4 p-2 bg-slate-950/60 border-b border-slate-800 text-xs">
+            <div className="grid grid-cols-4 p-2 bg-neutral-950/60 border-b border-neutral-800 text-xs">
               <button
                 id="tab-pay-upi"
                 onClick={() => setActiveTab('upi')}
                 className={`py-2.5 px-2 rounded-lg font-semibold flex flex-col items-center gap-1 transition-all ${
                   activeTab === 'upi'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-neutral-600 text-white shadow-md'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
                 }`}
               >
                 <Smartphone className="w-4 h-4" />
@@ -327,8 +327,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={() => setActiveTab('card')}
                 className={`py-2.5 px-2 rounded-lg font-semibold flex flex-col items-center gap-1 transition-all ${
                   activeTab === 'card'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-neutral-600 text-white shadow-md'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
                 }`}
               >
                 <CreditCard className="w-4 h-4" />
@@ -340,8 +340,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={() => setActiveTab('netbanking')}
                 className={`py-2.5 px-2 rounded-lg font-semibold flex flex-col items-center gap-1 transition-all ${
                   activeTab === 'netbanking'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-neutral-600 text-white shadow-md'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
                 }`}
               >
                 <Building2 className="w-4 h-4" />
@@ -353,8 +353,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={() => setActiveTab('wallet')}
                 className={`py-2.5 px-2 rounded-lg font-semibold flex flex-col items-center gap-1 transition-all ${
                   activeTab === 'wallet'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-neutral-600 text-white shadow-md'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
                 }`}
               >
                 <Wallet className="w-4 h-4" />
@@ -367,7 +367,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {/* UPI Tab */}
               {activeTab === 'upi' && (
                 <div className="space-y-4">
-                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center flex-col space-y-2">
+                  <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-center flex-col space-y-2">
                     <QRCodeSVG
                       value={order.qrCodeData}
                       size={140}
@@ -376,31 +376,31 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       className="rounded-lg shadow-sm"
                     />
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-slate-200">Scan QR with any UPI App</p>
-                      <p className="text-[10px] text-slate-400">GPay, PhonePe, Paytm, CRED, Amazon Pay</p>
+                      <p className="text-xs font-semibold text-neutral-200">Scan QR with any UPI App</p>
+                      <p className="text-[10px] text-neutral-400">GPay, PhonePe, Paytm, CRED, Amazon Pay</p>
                     </div>
                   </div>
 
                   <div className="relative flex py-1 items-center">
-                    <div className="flex-grow border-t border-slate-800"></div>
-                    <span className="flex-shrink mx-3 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Or enter UPI ID</span>
-                    <div className="flex-grow border-t border-slate-800"></div>
+                    <div className="flex-grow border-t border-neutral-800"></div>
+                    <span className="flex-shrink mx-3 text-[10px] text-neutral-500 uppercase tracking-wider font-semibold">Or enter UPI ID</span>
+                    <div className="flex-grow border-t border-neutral-800"></div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs text-slate-300 font-medium">Virtual Payment Address (VPA)</label>
+                    <label className="text-xs text-neutral-300 font-medium">Virtual Payment Address (VPA)</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={upiId}
                         onChange={(e) => setUpiId(e.target.value)}
                         placeholder="mobile@upi or user@okhdfcbank"
-                        className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-xs text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
                       />
                       <button
                         id="btn-verify-upi"
                         onClick={handleProcessPayment}
-                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shrink-0"
+                        className="px-4 py-2 rounded-xl bg-neutral-600 hover:bg-neutral-500 text-white font-semibold text-xs transition-colors shrink-0"
                       >
                         Request OTP
                       </button>
@@ -413,10 +413,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {activeTab === 'card' && (
                 <div className="space-y-3.5">
                   {/* Test Card Presets Selector */}
-                  <div className="p-2.5 rounded-xl bg-slate-950 border border-indigo-900/40 space-y-1.5 text-xs">
+                  <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-900/40 space-y-1.5 text-xs">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-indigo-300 font-semibold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-indigo-400" /> Test Card Presets:
+                      <span className="text-neutral-300 font-semibold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-neutral-400" /> Test Card Presets:
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5 text-[10px]">
@@ -425,8 +425,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         onClick={() => handleTestCardPreset('success')}
                         className={`p-1.5 rounded-lg border text-center transition-all ${
                           testCardMode === 'success'
-                            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 font-bold'
-                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                            ? 'bg-green-950/60 border-green-500/50 text-green-300 font-bold'
+                            : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                         }`}
                       >
                         ✓ Instant Success
@@ -436,8 +436,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         onClick={() => handleTestCardPreset('otp')}
                         className={`p-1.5 rounded-lg border text-center transition-all ${
                           testCardMode === 'otp'
-                            ? 'bg-indigo-950/60 border-indigo-500/50 text-indigo-300 font-bold'
-                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                            ? 'bg-neutral-950/60 border-neutral-500/50 text-neutral-300 font-bold'
+                            : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                         }`}
                       >
                         ⚡ 3DS OTP Challenge
@@ -447,8 +447,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         onClick={() => handleTestCardPreset('decline')}
                         className={`p-1.5 rounded-lg border text-center transition-all ${
                           testCardMode === 'decline'
-                            ? 'bg-rose-950/60 border-rose-500/50 text-rose-300 font-bold'
-                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                            ? 'bg-red-950/60 border-red-500/50 text-red-300 font-bold'
+                            : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                         }`}
                       >
                         ✕ Bank Decline
@@ -458,47 +458,47 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
                   <div className="space-y-2">
                     <div>
-                      <label className="text-[11px] text-slate-400">Card Number</label>
+                      <label className="text-[11px] text-neutral-400">Card Number</label>
                       <div className="relative mt-1">
                         <input
                           type="text"
                           value={cardNumber}
                           onChange={(e) => setCardNumber(e.target.value)}
-                          className="w-full px-3 py-2 pl-9 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 pl-9 rounded-xl bg-neutral-950 border border-neutral-700 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
                         />
-                        <CreditCard className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <CreditCard className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[11px] text-slate-400">Expiry (MM/YY)</label>
+                        <label className="text-[11px] text-neutral-400">Expiry (MM/YY)</label>
                         <input
                           type="text"
                           value={cardExpiry}
                           onChange={(e) => setCardExpiry(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-slate-400">CVV</label>
+                        <label className="text-[11px] text-neutral-400">CVV</label>
                         <input
                           type="password"
                           maxLength={4}
                           value={cardCvv}
                           onChange={(e) => setCardCvv(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-slate-400">Cardholder Name</label>
+                      <label className="text-[11px] text-neutral-400">Cardholder Name</label>
                       <input
                         type="text"
                         value={cardHolder}
                         onChange={(e) => setCardHolder(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-xs text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
                       />
                     </div>
                   </div>
@@ -508,14 +508,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {/* Netbanking Tab */}
               {activeTab === 'netbanking' && (
                 <div className="space-y-3">
-                  <span className="text-xs text-slate-400">Popular Banks</span>
+                  <span className="text-xs text-neutral-400">Popular Banks</span>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     {['HDFC Bank', 'ICICI Bank', 'SBI', 'Axis Bank', 'Kotak', 'Others'].map((bank, i) => (
                       <button
                         key={i}
                         type="button"
                         onClick={handleProcessPayment}
-                        className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/60 text-slate-200 text-center font-medium transition-all"
+                        className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 hover:border-neutral-500/60 text-neutral-200 text-center font-medium transition-all"
                       >
                         {bank}
                       </button>
@@ -527,17 +527,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {/* Wallet Tab */}
               {activeTab === 'wallet' && (
                 <div className="space-y-3">
-                  <span className="text-xs text-slate-400">Select Digital Wallet</span>
+                  <span className="text-xs text-neutral-400">Select Digital Wallet</span>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {['Amazon Pay', 'Paytm Wallet', 'MobiKwik', 'PhonePe Wallet'].map((w, i) => (
                       <button
                         key={i}
                         type="button"
                         onClick={handleProcessPayment}
-                        className="p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/60 text-slate-200 text-left font-medium flex items-center justify-between transition-all"
+                        className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 hover:border-neutral-500/60 text-neutral-200 text-left font-medium flex items-center justify-between transition-all"
                       >
                         <span>{w}</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                        <ArrowRight className="w-3.5 h-3.5 text-neutral-500" />
                       </button>
                     ))}
                   </div>
@@ -546,16 +546,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <Lock className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="p-4 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+                <Lock className="w-3.5 h-3.5 text-green-400" />
                 <span>PCI-DSS Level 1 Encrypted</span>
               </div>
 
               <button
                 id="btn-confirm-razorpay-pay"
                 onClick={handleProcessPayment}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-900/30"
+                className="px-6 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-green-900/30"
               >
                 <span>Pay ₹{order.totalAmount.toLocaleString('en-IN')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
