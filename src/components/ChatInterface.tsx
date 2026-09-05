@@ -272,8 +272,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Main Messages Scroll Container */}
       <div 
         id="messages-scroll-area"
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+        className="flex-1 overflow-y-auto p-4 sm:p-6"
       >
+        <div className="max-w-5xl mx-auto space-y-4 w-full">
         {messages.map((message) => {
           const isLatestAgentWaiting = Boolean(
             isWaitingForNextTurn && 
@@ -327,11 +328,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
 
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area Form & PII Real-time Warning */}
       <div className="p-4 bg-neutral-950 border-t border-neutral-800 shrink-0 space-y-2 z-10">
-        
+        <div className="max-w-5xl mx-auto w-full space-y-2">
         {/* Real-time PII Alert Banner */}
         {piiWarning && (
           <div className="px-3 py-2 rounded-xl bg-amber-950/80 border border-amber-600/70 text-amber-200 text-xs flex items-center gap-2 animate-fadeIn font-mono">
@@ -450,7 +452,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   setInputText('');
                   setPiiWarning(null);
                 }}
-                className="absolute right-4 top-1/2 -tranneutral-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -475,6 +477,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </span>
         </div>
 
+        </div>
       </div>
 
     </div>

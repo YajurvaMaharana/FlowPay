@@ -105,7 +105,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
           <button 
             id="brand-logo-btn"
             onClick={() => onNavigate('home')} 
-            className="flex items-center gap-2.5 text-white group text-left transition-transform active:scale-95"
+            className="flex items-center gap-2.5 text-white group text-left transition-transform active:scale-95 cursor-pointer"
           >
             {/* Reference Pinwheel Swirl Logo */}
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white text-neutral-950 flex items-center justify-center shadow-lg group-hover:rotate-45 transition-transform duration-500">
@@ -366,10 +366,14 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
           <button
             id="navbar-open-agent-pill"
             onClick={() => onOpenAgent()}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-black/40 hover:bg-neutral-100 active:scale-95 transition-all"
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-black/40 active:scale-95 transition-all ${
+              currentTab === 'concierge'
+                ? 'bg-neutral-100 text-neutral-950 ring-2 ring-neutral-400 font-extrabold'
+                : 'bg-white text-neutral-950 hover:bg-neutral-100'
+            }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-neutral-600 fill-neutral-600 animate-spin-slow" />
-            <span className="hidden sm:inline">Ask AI Agent</span>
+            <Sparkles className="w-3.5 h-3.5 text-neutral-950 fill-neutral-950" />
+            <span className="hidden sm:inline">AI Concierge</span>
             <span className="sm:hidden">AI</span>
           </button>
 

@@ -161,7 +161,7 @@ export interface TestScenario {
   steps: string[];
 }
 
-export type NavigationTab = 'home' | 'shop' | 'new-arrivals' | 'about' | 'contact';
+export type NavigationTab = 'home' | 'about' | 'shop' | 'new-arrivals' | 'contact' | 'concierge';
 
 export interface UserProfile {
   id: string;

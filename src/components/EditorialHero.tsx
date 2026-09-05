@@ -207,7 +207,7 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
             <button 
               id="brand-logo-btn"
               onClick={() => onNavigate('home')} 
-              className="flex items-center gap-2.5 text-white group text-left transition-transform active:scale-95"
+              className="flex items-center gap-2.5 text-white group text-left transition-transform active:scale-95 cursor-pointer"
             >
               {/* Reference Pinwheel Swirl Logo */}
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white text-neutral-950 flex items-center justify-center shadow-lg group-hover:rotate-45 transition-transform duration-500">

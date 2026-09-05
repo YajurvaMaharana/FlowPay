@@ -20,8 +20,8 @@ import { NewArrivalsPage } from './components/NewArrivalsPage';
 import { AboutPage } from './components/AboutPage';
 import { ContactPage } from './components/ContactPage';
 
-// AI Agent Sidebar
-import { AlphaCartSidebar } from './components/AlphaCartSidebar';
+// AI Agent Full-Screen Workspace
+import { ConciergeWorkspace } from './components/ConciergeWorkspace';
 
 // Modals
 import { ProductDetailModal } from './components/ProductDetailModal';
@@ -734,10 +734,21 @@ export function App() {
     handlePaymentFailed(order, 'BANK_DECLINED_ISSUER_TIMEOUT');
   };
 
+  const handleOpenAgent = (query?: string, tab: 'chat' | 'audit' | 'catalog' | 'cart' | 'security' = 'chat') => {
+    setCurrentTab('concierge');
+    setAgentSidebarTab(tab);
+    if (query) {
+      handleSendMessage(query);
+    }
+  };
+
+  const handleOpenCart = () => {
+    setCurrentTab('concierge');
+    setAgentSidebarTab('cart');
+  };
+
   const handleRequestNewLink = (order: PaymentOrder) => {
-    setIsAgentSidebarOpen(true);
-    setAgentSidebarTab('chat');
-    handleSendMessage(`The 5-minute payment link for order ${order.orderId} has expired. Please generate a fresh payment link with the 5-minute cryptographic lock.`);
+    handleOpenAgent(`The 5-minute payment link for order ${order.orderId} has expired. Please generate a fresh payment link with the 5-minute cryptographic lock.`);
   };
 
   const handleResetSession = () => {
@@ -826,7 +837,7 @@ export function App() {
           user={user}
           searchQuery={globalSearchQuery}
           onSearch={handleGlobalSearch}
-          onOpenCart={() => { setIsAgentSidebarOpen(true); setAgentSidebarTab('cart'); }}
+          onOpenCart={handleOpenCart}
           onOpenSavedGear={() => setIsSavedGearModalOpen(true)}
           onOpenOrders={() => setIsOrdersModalOpen(true)}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
@@ -835,15 +846,12 @@ export function App() {
             setIsAuthModalOpen(true);
           }}
           onLogout={handleLogout}
-          onOpenAgent={(query) => {
-            setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-            if (query) handleSendMessage(query);
-          }}
+          onOpenAgent={(query) => handleOpenAgent(query, 'chat')}
         />
       )}
 
       {/* Main Routing Views */}
-      <main className="flex-1">
+      <main className="flex-1 flex flex-col">
         {currentTab === 'home' && (
           <EditorialHero
             featuredProducts={PRODUCTS}
@@ -853,18 +861,11 @@ export function App() {
             securityStatus={securityMetrics.zeroTrustStatus}
             searchQuery={globalSearchQuery}
             onSearch={handleGlobalSearch}
-            onOpenAgent={(initialQuery) => {
-              setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-              if (initialQuery) {
-                handleSendMessage(initialQuery);
-              }
-            }}
+            onOpenAgent={(initialQuery) => handleOpenAgent(initialQuery, 'chat')}
             onSelectProduct={(product) => {
               setSelectedProductDetail(product);
             }}
-            onOpenCart={() => {
-              setIsAgentSidebarOpen(true); setAgentSidebarTab('cart');
-            }}
+            onOpenCart={handleOpenCart}
             onOpenSavedGear={() => setIsSavedGearModalOpen(true)}
             onOpenOrders={() => setIsOrdersModalOpen(true)}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
@@ -885,10 +886,7 @@ export function App() {
             savedGearIds={user.savedGearIds}
             searchQuery={globalSearchQuery}
             onSearchChange={setGlobalSearchQuery}
-            onOpenAgent={(query) => {
-              setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-              if (query) handleSendMessage(query);
-            }}
+            onOpenAgent={(query) => handleOpenAgent(query, 'chat')}
           />
         )}
 
@@ -898,34 +896,68 @@ export function App() {
             onAddToCart={handleAddToCart}
             onToggleSave={handleToggleSaveGear}
             savedGearIds={user.savedGearIds}
-            onOpenAgent={(query) => {
-              setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-              if (query) handleSendMessage(query);
-            }}
+            onOpenAgent={(query) => handleOpenAgent(query, 'chat')}
           />
         )}
 
         {currentTab === 'about' && (
           <AboutPage
-            onOpenAgent={(query) => {
-              setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-              if (query) handleSendMessage(query);
-            }}
+            onOpenAgent={(query) => handleOpenAgent(query, 'chat')}
           />
         )}
 
         {currentTab === 'contact' && (
           <ContactPage
-            onOpenAgent={(query) => {
-              setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-              if (query) handleSendMessage(query);
-            }}
+            onOpenAgent={(query) => handleOpenAgent(query, 'chat')}
           />
+        )}
+
+        {currentTab === 'concierge' && (
+          <div className="flex-1 flex flex-col w-full h-[calc(100vh-4rem)]">
+            <ConciergeWorkspace
+              activeTab={agentSidebarTab}
+              onTabChange={setAgentSidebarTab}
+              messages={messages}
+              isLoading={isLoading}
+              activeScenario={activeScenario}
+              cart={cart}
+              purchasedItems={sessionPurchasedItems}
+              cartCalculation={cartCalculation}
+              appliedDiscount={appliedDiscount}
+              couponCode={couponCode}
+              securityMetrics={securityMetrics}
+              securityAlerts={securityAlerts}
+              toolCallsHistory={toolCallsHistory}
+              activePaymentOrder={activePaymentOrder}
+              pendingGatedAction={pendingGatedAction}
+              isA2AMode={isA2AMode}
+              isA2ATyping={isA2ATyping}
+              onToggleA2A={handleToggleA2A}
+              onNextA2ATurn={handleNextA2ATurn}
+              onAddBundleToCart={handleAddBundleToCart}
+              onSendMessage={handleSendMessage}
+              onGatedConfirm={handleGatedActionConfirm}
+              onOpenProductDetail={(prod) => setSelectedProductDetail(prod)}
+              onAddToCart={handleAddToCart}
+              onUpdateCartQuantity={handleUpdateQuantity}
+              onRemoveCartItem={handleRemoveCartItem}
+              onApplyCoupon={handleApplyCoupon}
+              onOpenPaymentModal={handleOpenPaymentModal}
+              onSimulateFailure={handleSimulateFailure}
+              onOpenInvoice={(ord) => setSelectedInvoiceOrder(ord)}
+              onSelectScenario={handleSelectScenario}
+              onOpenToolsModal={() => setIsToolsModalOpen(true)}
+              onResetSession={handleResetSession}
+              onRequestNewLink={handleRequestNewLink}
+              onPaymentSuccess={handlePaymentSuccess}
+              onNavigateToStore={(tab) => setCurrentTab(tab || 'home')}
+            />
+          </div>
         )}
       </main>
 
-      {/* Global Footer for subpages */}
-      {currentTab !== 'home' && (
+      {/* Global Footer for subpages (excluding full-screen concierge view) */}
+      {currentTab !== 'home' && currentTab !== 'concierge' && (
         <footer className="w-full border-t border-stone-800/80 bg-stone-950 py-10 px-6 sm:px-12 text-stone-400 text-xs font-mono">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -955,55 +987,12 @@ export function App() {
         </footer>
       )}
 
-      {/* Side-Mounted AlphaCart Agent Sidebar (35-45% width collapsible panel) */}
-      <AlphaCartSidebar
-        isOpen={isAgentSidebarOpen}
-        onClose={() => setIsAgentSidebarOpen(false)}
-        activeTab={agentSidebarTab}
-        onTabChange={setAgentSidebarTab}
-        messages={messages}
-        isLoading={isLoading}
-        activeScenario={activeScenario}
-        cart={cart}
-        purchasedItems={sessionPurchasedItems}
-        cartCalculation={cartCalculation}
-        appliedDiscount={appliedDiscount}
-        couponCode={couponCode}
-        securityMetrics={securityMetrics}
-        securityAlerts={securityAlerts}
-        toolCallsHistory={toolCallsHistory}
-        activePaymentOrder={activePaymentOrder}
-        pendingGatedAction={pendingGatedAction}
-        isA2AMode={isA2AMode}
-        isA2ATyping={isA2ATyping}
-        onToggleA2A={handleToggleA2A}
-        onNextA2ATurn={handleNextA2ATurn}
-        
-        onAddBundleToCart={handleAddBundleToCart}
-        onSendMessage={handleSendMessage}
-        onGatedConfirm={handleGatedActionConfirm}
-        onOpenProductDetail={(prod) => setSelectedProductDetail(prod)}
-        onAddToCart={handleAddToCart}
-        onUpdateCartQuantity={handleUpdateQuantity}
-        onRemoveCartItem={handleRemoveCartItem}
-        onApplyCoupon={handleApplyCoupon}
-        onOpenPaymentModal={handleOpenPaymentModal}
-        onSimulateFailure={handleSimulateFailure}
-        onOpenInvoice={(ord) => setSelectedInvoiceOrder(ord)}
-        onSelectScenario={handleSelectScenario}
-        onOpenToolsModal={() => setIsToolsModalOpen(true)}
-        onResetSession={handleResetSession}
-        onRequestNewLink={handleRequestNewLink}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
-
       {/* Modals & Overlays */}
       <ToolsSchemaModal
         isOpen={isToolsModalOpen}
         onClose={() => setIsToolsModalOpen(false)}
         onSelectToolToChat={(name, prompt) => {
-          setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-          handleSendMessage(prompt);
+          handleOpenAgent(prompt, 'chat');
         }}
       />
 
@@ -1013,8 +1002,7 @@ export function App() {
         onClose={() => setSelectedProductDetail(null)}
         onAddToCart={handleAddToCart}
         onAskAgentAbout={(prod) => {
-          setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-          handleSendMessage(`What are the key specs and features of the ${prod.name}?`);
+          handleOpenAgent(`What are the key specs and features of the ${prod.name}?`, 'chat');
         }}
       />
 
@@ -1054,8 +1042,7 @@ export function App() {
         onViewInvoice={(ord) => setSelectedInvoiceOrder(ord)}
         onOpenPaymentModal={handleOpenPaymentModal}
         onOpenAgent={(query) => {
-          setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-          if (query) handleSendMessage(query);
+          handleOpenAgent(query, 'chat');
         }}
       />
 
@@ -1067,8 +1054,7 @@ export function App() {
         onRemoveFromSaved={handleToggleSaveGear}
         onOpenProductDetail={(prod) => setSelectedProductDetail(prod)}
         onOpenAgent={(query) => {
-          setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
-          if (query) handleSendMessage(query);
+          handleOpenAgent(query, 'chat');
         }}
       />
 
