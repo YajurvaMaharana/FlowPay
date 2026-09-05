@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Message, PaymentOrder, Product } from '../types';
 import { ToolCallBadge } from './ToolCallBadge';
 import { PaymentLinkCard } from './PaymentLinkCard';
-import { UpiQrCard } from './UpiQrCard';
 import confetti from 'canvas-confetti';
 import { 
   Bot, User, ShieldAlert, Sparkles, ShieldCheck, ArrowRight, 
@@ -400,20 +399,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               </button>
             </div>
           </div>
-        )}
-
-        {/* Stylized Dark-Themed UPI QR Code Card Embed (When Order is Pending) */}
-        {message.paymentOrder && 
-          (message.paymentOrder.status === 'pending' || 
-           message.paymentOrder.status === 'pending_payment' || 
-           message.paymentOrder.status === 'created' || 
-           (!['paid', 'success'].includes(message.paymentOrder.status))) && (
-          <UpiQrCard
-            order={message.paymentOrder}
-            onOpenPaymentModal={onOpenPaymentModal}
-            onPaymentSuccess={onPaymentSuccess}
-            onRequestNewLink={onRequestNewLink}
-          />
         )}
 
         {/* Payment Link Card Embed */}

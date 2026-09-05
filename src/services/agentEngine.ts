@@ -1,6 +1,7 @@
 import { CartCalculation, CartItem, Message, PaymentOrder, Product, SecurityAlert, ToolCallEvent } from '../types';
 import { PRODUCTS } from '../data/products';
 import { evaluateEcosystemContext, TaggedEcosystemContext } from '../data/ecosystem';
+import { SessionStore } from './sessionStore';
 
 export interface AgentContext {
   cart: CartItem[];
@@ -621,13 +622,13 @@ export async function processUserMessage(
     const message: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
-      content: `I'm very sorry for the inconvenience — your bank card transaction was declined by the card issuer.\n\n🔒 **Don't worry**: Your cart items and applied **10% special discount are securely held for the next 15 minutes** so you won't lose your reserved inventory.\n\nWould you like to complete checkout using **Instant UPI QR (Google Pay / PhonePe / Paytm)** or retry with an **alternate credit or debit card**?`,
+      content: `I'm very sorry for the inconvenience — your bank card transaction was declined by the card issuer.\n\n🔒 **Don't worry**: Your cart items and applied **10% special discount are securely held for the next 15 minutes** so you won't lose your reserved inventory.\n\nYou can click **Complete Secure Checkout** on your order summary card below to retry or complete payment with an alternate card or UPI method.`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
       isFailureRecovery: true,
       paymentOrder: updatedOrder,
-      quickReplies: ['Retry with UPI QR Code', 'Retry with Alternate Card', 'Open Razorpay Link']
+      quickReplies: ['Complete Secure Checkout', 'Retry with Alternate Card', 'View Invoice Receipt']
     };
 
     return {
@@ -655,27 +656,52 @@ export async function processUserMessage(
       updatedCart = [{ product: defaultItem, quantity: 1 }];
     }
 
+    // Urgency Cost Penalty: Hesitation past expiry reduces discount by 2% (e.g. 7% -> 5%)
+    const oldDiscount = appliedDiscount > 0 ? appliedDiscount : 7;
+    const newDiscount = Math.max(0, oldDiscount - 2);
+    appliedDiscount = newDiscount;
+
     const payResult = generatePaymentTool({
       items: updatedCart,
       customerEmail: context.userEmail,
       customerName: 'Valued Customer',
-      discountPercentage: appliedDiscount,
-      couponCode,
+      discountPercentage: newDiscount,
+      couponCode: `URGENCY_${newDiscount}`,
       isConfirmedByGating: true
     });
 
+    const auditTrailLog = `Link expired, regenerated with ${newDiscount}% discount (reduced from ${oldDiscount}%)`;
+
+    // Telemetry & Security note for Audit Trail
+    payResult.toolCall.securityNote = auditTrailLog;
+    if (payResult.toolCall.output) {
+      payResult.toolCall.output.audit_log = auditTrailLog;
+      payResult.toolCall.output.penalty_reason = 'EXPIRED_LINK_REGENERATION_URGENCY_COST';
+    }
+
     toolCalls.push(payResult.toolCall);
+    securityAlerts.push({
+      id: `alert_urgency_${Date.now()}`,
+      type: 'URGENCY_COST_PENALTY_APPLIED',
+      severity: 'low',
+      message: auditTrailLog,
+      timestamp: new Date().toISOString(),
+      details: `User hesitation past 5-minute ephemeral gateway lock. Regenerated link with a 2% discount penalty (${oldDiscount}% -> ${newDiscount}%).`
+    });
     securityAlerts.push(...payResult.securityAlerts);
     updatedOrder = payResult.order;
 
-    const concessionText = appliedDiscount > 0
-      ? ` and your **${appliedDiscount}% concession lock**`
-      : '';
+    const formattedExpiry = updatedOrder?.expiresAt ? (() => {
+      const remainingSec = Math.max(0, Math.floor((new Date(updatedOrder.expiresAt).getTime() - Date.now()) / 1000));
+      const mins = Math.floor(remainingSec / 60);
+      const secs = remainingSec % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    })() : '4:32';
 
     const message: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
-      content: `🔄 **New Cryptographic Session Generated**\n\nI have generated a fresh **Razorpay checkout link**${concessionText} for your items.\n\n⏳ **5-Minute Cryptographic Lock Active (05:00 countdown)**:\nYour checkout window has been reset for exactly 5 minutes. Complete payment before expiration to lock in your allocation and pricing.`,
+      content: `🔄 **Payment Link Expired & Regenerated**\n\nYour previous checkout link has expired. I have regenerated a fresh **Razorpay secure payment link**, but because checkout was delayed past the expiration window, your discount has been reduced by 2% (from ${oldDiscount}% to ${newDiscount}%).\n\nThis link expires in ${formattedExpiry}—complete checkout to lock in your ${newDiscount}% discount.`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
@@ -689,7 +715,7 @@ export async function processUserMessage(
       updatedOrder,
       newSecurityAlerts: securityAlerts,
       appliedDiscount,
-      couponCode
+      couponCode: `URGENCY_${newDiscount}`
     };
   }
 
@@ -716,7 +742,9 @@ export async function processUserMessage(
       const apex = PRODUCTS.find(p => p.id === 'prod_apex_anc')!;
       const dac = PRODUCTS.find(p => p.id === 'prod_soundwave_dac')!;
       updatedCart = [{ product: apex, quantity: 1 }, { product: dac, quantity: 1 }];
-      appliedDiscount = 10;
+      appliedDiscount = 7;
+    } else if (appliedDiscount === 0) {
+      appliedDiscount = 7;
     }
 
     // Call generate_payment tool with verified gating
@@ -733,11 +761,17 @@ export async function processUserMessage(
     securityAlerts.push(...payResult.securityAlerts);
     updatedOrder = payResult.order;
 
-    const effectiveDiscount = appliedDiscount > 0 ? appliedDiscount : 3;
+    const formattedExpiry = updatedOrder?.expiresAt ? (() => {
+      const remainingSec = Math.max(0, Math.floor((new Date(updatedOrder.expiresAt).getTime() - Date.now()) / 1000));
+      const mins = Math.floor(remainingSec / 60);
+      const secs = remainingSec % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    })() : '4:32';
+
     const message: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       sender: 'agent',
-      content: `🔒 **Strict 5-Minute Cryptographic Gateway Lock Active**:\nThis Razorpay secure link and your ${effectiveDiscount}% concession lock will expire in exactly 5 minutes (05:00 countdown). Use this ephemeral window to finalize your order before the cryptographic allocation locks out. Click **Complete Secure Checkout** below to authorize payment:`,
+      content: `🔒 **Strict 5-Minute Cryptographic Gateway Lock Active**:\nThis link expires in ${formattedExpiry}—complete checkout to lock in your ${appliedDiscount}% discount.\n\nClick **Complete Secure Checkout** below to authorize payment:`,
       timestamp: new Date().toISOString(),
       toolCalls,
       securityAlerts,
@@ -756,11 +790,26 @@ export async function processUserMessage(
   }
 
   // Step 7: Cross-sell Acceptance or Addition
-  if (lowerText.includes('add the hi-fi dac') || lowerText.includes('add dac') || lowerText.includes('add cross-sell') || lowerText.includes('add aviator cable') || lowerText.includes('add strap')) {
+  const isAddCrossSellIntent = 
+    lowerText.includes('add the hi-fi dac') || lowerText.includes('add dac') || 
+    lowerText.includes('add cross-sell') || lowerText.includes('add aviator cable') || 
+    lowerText.includes('add strap') || lowerText.includes('add keycap') || 
+    lowerText.includes('add artisan') || lowerText.includes('add cable') || 
+    lowerText.includes('add deskmat') || lowerText.includes('add sleeve') || 
+    lowerText.includes('add dock') || lowerText.includes('add stand') ||
+    lowerText.startsWith('add cyberforge') || lowerText.startsWith('add vanguard') ||
+    lowerText.startsWith('add deskmat') || lowerText.startsWith('add aeroshield');
+
+  if (isAddCrossSellIntent) {
     let crossSellItem: Product | undefined;
     if (lowerText.includes('dac')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_soundwave_dac');
-    else if (lowerText.includes('cable')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_coiled_cable');
-    else if (lowerText.includes('strap')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_nomad_strap');
+    else if (lowerText.includes('keycap') || lowerText.includes('artisan') || lowerText.includes('cyberforge')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_artisan_keycaps') || PRODUCTS.find(p => p.tags.includes('keycaps'));
+    else if (lowerText.includes('cable') || lowerText.includes('vanguard') || lowerText.includes('aviator')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_coiled_cable');
+    else if (lowerText.includes('deskmat') || lowerText.includes('mousepad')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_deskmat_pro');
+    else if (lowerText.includes('sleeve') || lowerText.includes('aeroshield')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_laptop_sleeve');
+    else if (lowerText.includes('dock') || lowerText.includes('usbc')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_usbc_dock');
+    else if (lowerText.includes('strap') || lowerText.includes('band')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_nomad_strap');
+    else if (lowerText.includes('stand')) crossSellItem = PRODUCTS.find(p => p.id === 'prod_vertical_stand') || PRODUCTS.find(p => p.id === 'prod_laptop_stand');
     else crossSellItem = PRODUCTS.find(p => p.id === 'prod_deskmat_pro');
 
     if (crossSellItem) {
@@ -768,7 +817,36 @@ export async function processUserMessage(
       if (!exists) {
         updatedCart.push({ product: crossSellItem, quantity: 1 });
       }
-      // No flat bundle discount to optimize merchant yield
+
+      // Record conversion in persistent session store
+      const session = SessionStore.getSession();
+      const coreName = context.purchasedItems?.[0]?.name || updatedCart[0]?.product.name || 'Core Product';
+      SessionStore.logConversion(coreName, crossSellItem.name, crossSellItem.price);
+
+      // Audit trail telemetry for conversion
+      const conversionToolCall: ToolCallEvent = {
+        id: `tool_${Date.now()}_cross_sell_conv`,
+        name: 'cross_sell_converted',
+        input: {
+          session_id: session.sessionId,
+          customer_id: session.customerId,
+          core_product: coreName,
+          added_accessory: crossSellItem.name,
+          accessory_price: crossSellItem.price
+        },
+        output: {
+          status: 'CROSS_SELL_CONVERSION_SUCCESS',
+          conversion_type: 'ECOSYSTEM_COMPANION_ADDED',
+          cart_total_increment: crossSellItem.price,
+          currency: 'INR'
+        },
+        status: 'success',
+        timestamp: new Date().toISOString(),
+        executionTimeMs: 14,
+        securityNote: `Ecosystem cross-sell conversion recorded in session telemetry for customer (${session.customerId}).`
+      };
+
+      toolCalls.push(conversionToolCall);
     }
 
     const calcResult = calculateCartTool(updatedCart, appliedDiscount, couponCode);
@@ -950,6 +1028,36 @@ export async function processUserMessage(
     } else {
       organicPitch = `Since you picked up the **${coreProduct.name}** earlier, would you like to pair it with our **${topAccessory.name}**?`;
     }
+
+    // Record impression in persistent session store
+    const session = SessionStore.getSession();
+    SessionStore.logImpression(coreProduct.name, topAccessory.name);
+
+    // Audit trail telemetry for ecosystem cross-sell impression
+    const crossSellImpToolCall: ToolCallEvent = {
+      id: `tool_${Date.now()}_cross_sell_imp`,
+      name: 'eval_ecosystem_cross_sell',
+      input: {
+        session_id: session.sessionId,
+        customer_id: session.customerId,
+        purchased_core_product: coreProduct.name,
+        target_accessory: topAccessory.name,
+        context_tags: ecosystemContext.contextTags
+      },
+      output: {
+        status: 'CROSS_SELL_IMPRESSION_INJECTED',
+        pitch: organicPitch,
+        recommended_item: topAccessory.name,
+        price: topAccessory.price,
+        ecosystem_synergy_matched: true
+      },
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      executionTimeMs: 16,
+      securityNote: `Contextual cross-sell memory evaluated for active session customer (${session.customerId}).`
+    };
+
+    toolCalls.push(crossSellImpToolCall);
 
     const accessoriesList = ecosystemContext.compatibleAccessories.map(acc => 
       `• **${acc.name}** (₹${acc.price.toLocaleString('en-IN')}) — ${acc.tagline}`

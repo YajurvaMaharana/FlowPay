@@ -11,6 +11,7 @@ import {
   sanitizePii, handlePaymentFailureTool 
 } from './services/agentEngine';
 import { simulateBuyerBot } from './services/buyerBot';
+import { SessionStore } from './services/sessionStore';
 
 // Page Views & Global Layout
 import { EditorialHero } from './components/EditorialHero';
@@ -32,6 +33,7 @@ import { MyOrdersModal } from './components/MyOrdersModal';
 import { SavedGearModal } from './components/SavedGearModal';
 import { AccountSettingsModal } from './components/AccountSettingsModal';
 import { RazorpayModal } from './components/RazorpayModal';
+import { TactileMonogramIcon } from './components/TactileMonogramLogo';
 
 export function App() {
   // Navigation Routing State
@@ -77,7 +79,7 @@ export function App() {
   const [cart, setCart] = useState<CartItem[]>([
     { product: PRODUCTS[0], quantity: 1 } // Preloaded with Apex ANC Pro
   ]);
-  const [sessionPurchasedItems, setSessionPurchasedItems] = useState<Product[]>([]);
+  const [sessionPurchasedItems, setSessionPurchasedItems] = useState<Product[]>(() => SessionStore.getPurchasedItems());
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [couponCode, setCouponCode] = useState<string | undefined>(undefined);
   const [cartCalculation, setCartCalculation] = useState<CartCalculation>(() => {
@@ -437,7 +439,7 @@ export function App() {
 
     const targetItems = action.items && action.items.length > 0 ? action.items : cart;
     const subtotal = targetItems.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
-    const effectiveDiscount = appliedDiscount > 0 ? appliedDiscount : 3;
+    const effectiveDiscount = appliedDiscount > 0 ? appliedDiscount : 7;
     const discount = Math.round(subtotal * (effectiveDiscount / 100));
     const tax = Math.round((subtotal - discount) * 0.18);
     const total = action.amount || (subtotal - discount + tax);
@@ -503,11 +505,16 @@ export function App() {
     setToolCallsHistory((prev) => [...prev, genPaymentToolCall]);
     setActivePaymentOrder(ephemeralOrder);
 
+    const remainingSec = Math.max(0, Math.floor(expireByEpoch - Date.now() / 1000));
+    const mins = Math.floor(remainingSec / 60);
+    const secs = remainingSec % 60;
+    const formattedExpiry = `${mins}:${secs.toString().padStart(2, '0')}`;
+
     // Ephemeral Urgency Script Message
     const urgencyMessage: Message = {
       id: `msg_stage1_${Date.now()}`,
       sender: 'agent',
-      content: `🔒 **Strict 5-Minute Cryptographic Gateway Lock Active**:\nThis Razorpay secure link and your ${effectiveDiscount}% concession lock will expire in exactly 5 minutes (05:00 countdown). Use this ephemeral window to finalize your order before the cryptographic allocation locks out. Click **Complete Secure Checkout** below to authorize payment:`,
+      content: `🔒 **Strict 5-Minute Cryptographic Gateway Lock Active**:\nThis link expires in ${formattedExpiry}—complete checkout to lock in your ${effectiveDiscount}% discount.\n\nClick **Complete Secure Checkout** below to authorize payment:`,
       timestamp: new Date().toISOString(),
       toolCalls: [genPaymentToolCall],
       paymentOrder: ephemeralOrder,
@@ -608,12 +615,8 @@ export function App() {
     setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
     if (scenario.id === 'scen_ecosystem_cross_sell') {
       const kbProduct = PRODUCTS.find(p => p.id === 'prod_keychron_mech') || PRODUCTS[1];
-      setSessionPurchasedItems(prev => {
-        if (!prev.some(p => p.id === kbProduct.id)) {
-          return [kbProduct, ...prev];
-        }
-        return prev;
-      });
+      SessionStore.addPurchasedItems([kbProduct]);
+      setSessionPurchasedItems(SessionStore.getPurchasedItems());
     }
     handleSendMessage(scenario.initialPrompt);
   };
@@ -640,17 +643,10 @@ export function App() {
 
     setActivePaymentOrder(updated);
 
-    // Track purchased products in active session state for ecosystem memory
-    setSessionPurchasedItems((prev) => {
-      const newPurchased = order.items.map(item => item.product);
-      const combined = [...prev];
-      for (const p of newPurchased) {
-        if (!combined.some(existing => existing.id === p.id)) {
-          combined.push(p);
-        }
-      }
-      return combined;
-    });
+    // Track purchased products in active session state and persistent storage
+    const newPurchased = order.items.map(item => item.product);
+    SessionStore.addPurchasedItems(newPurchased);
+    setSessionPurchasedItems(SessionStore.getPurchasedItems());
 
     // Log transaction payload to Live Audit Panel
     const auditRecord: ToolCallEvent = {
@@ -752,6 +748,7 @@ export function App() {
   };
 
   const handleResetSession = () => {
+    SessionStore.resetSession();
     setCart([{ product: PRODUCTS[0], quantity: 1 }]);
     setSessionPurchasedItems([]);
     setAppliedDiscount(0);
@@ -961,11 +958,7 @@ export function App() {
         <footer className="w-full border-t border-stone-800/80 bg-stone-950 py-10 px-6 sm:px-12 text-stone-400 text-xs font-mono">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-white text-stone-950 flex items-center justify-center font-bold">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                </svg>
-              </div>
+              <TactileMonogramIcon className="w-6 h-6 shrink-0 drop-shadow-sm" />
               <span className="font-editorial text-sm font-bold text-white">Veluno Tech & Acoustics</span>
               <span>•</span>
               <span>Bengaluru Studio</span>

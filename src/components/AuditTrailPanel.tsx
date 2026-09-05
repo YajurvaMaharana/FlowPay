@@ -27,7 +27,7 @@ export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({
   onClearLogs,
   onOpenToolsModal
 }) => {
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'check_catalog' | 'calculate_cart' | 'generate_payment' | 'alerts'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'check_catalog' | 'calculate_cart' | 'generate_payment' | 'eval_ecosystem_cross_sell' | 'cross_sell_converted' | 'alerts'>('all');
   const [expandedTraceIds, setExpandedTraceIds] = useState<Record<string, boolean>>({});
   const [copiedLog, setCopiedLog] = useState(false);
   const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
@@ -314,6 +314,17 @@ export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({
             }`}
           >
             generate_payment
+          </button>
+
+          <button
+            onClick={() => setSelectedFilter('eval_ecosystem_cross_sell')}
+            className={`px-2 py-1 rounded-lg font-mono text-[10px] transition-colors ${
+              selectedFilter === 'eval_ecosystem_cross_sell'
+                ? 'bg-neutral-600 text-white font-bold'
+                : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            ecosystem_cross_sell
           </button>
 
           <button

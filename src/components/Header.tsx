@@ -3,10 +3,11 @@ import { SecurityMetrics, TestScenario } from '../types';
 import { TEST_SCENARIOS } from '../data/scenarios';
 import { TOOL_SCHEMAS, ToolSchemaDefinition } from '../data/toolSchemas';
 import { 
-  Zap, ShieldCheck, ShoppingCart, Terminal, Play, 
+  ShieldCheck, ShoppingCart, Terminal, Play, 
   ChevronDown, Sparkles, AlertOctagon, RefreshCw, User, EyeOff,
   Wrench, Code2, Copy, FileJson, Check
 } from 'lucide-react';
+import { TactileMonogramIcon } from './TactileMonogramLogo';
 
 interface HeaderProps {
   cartItemCount: number;
@@ -46,15 +47,13 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="h-16 border-b border-neutral-800 bg-neutral-950/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
       {/* Brand Identity */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('chat')}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-neutral-600 to-neutral-400 flex items-center justify-center text-white shadow-lg shadow-neutral-900/30">
-            <Zap className="w-5 h-5 fill-white text-white" />
-          </div>
+        <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setActiveTab('chat')}>
+          <TactileMonogramIcon className="w-8 h-8 group-hover:scale-105 transition-transform shrink-0 drop-shadow-sm" />
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="font-display font-extrabold text-base tracking-tight text-white">FlowPay</h1>
-              <span className="px-1.5 py-0.2 rounded bg-neutral-950 text-neutral-300 border border-neutral-700/50 text-[10px] font-bold font-mono">
-                Veluno Concierge
+              <h1 className="font-editorial font-bold text-base tracking-tight text-white group-hover:text-neutral-200 transition-colors">Veluno</h1>
+              <span className="px-1.5 py-0.2 rounded bg-neutral-900 text-neutral-300 border border-neutral-700/60 text-[10px] font-bold font-mono">
+                Concierge
               </span>
             </div>
             <p className="text-[10px] text-neutral-400 hidden sm:block">Zero-Trust Merchant AI Sales & Instant Razorpay Checkout</p>

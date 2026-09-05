@@ -15,6 +15,7 @@ import { AuditTrailPanel } from './AuditTrailPanel';
 import { CatalogView } from './CatalogView';
 import { CartDrawer } from './CartDrawer';
 import { SecurityConsole } from './SecurityConsole';
+import { TactileMonogramIcon } from './TactileMonogramLogo';
 
 export interface ConciergeWorkspaceProps {
   messages: Message[];
@@ -122,9 +123,7 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
             className="flex items-center gap-2.5 cursor-pointer group hover:opacity-90 transition-opacity"
             title="Go to AI Concierge Dashboard"
           >
-            <div className="w-8 h-8 rounded-xl bg-white text-neutral-950 flex items-center justify-center shadow-lg shadow-white/5 font-bold group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4 text-neutral-950 fill-neutral-950" />
-            </div>
+            <TactileMonogramIcon className="w-8 h-8 group-hover:scale-105 transition-transform shrink-0 drop-shadow-sm" />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-editorial text-base sm:text-lg font-bold text-white tracking-tight group-hover:text-neutral-200 transition-colors">

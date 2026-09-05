@@ -73,7 +73,7 @@ export interface PaymentOrder {
 
 export interface ToolCallEvent {
   id: string;
-  name: 'check_catalog' | 'calculate_cart' | 'generate_payment' | 'handle_payment_failure' | 'scrub_pii' | 'analyze_workspace_vision';
+  name: 'check_catalog' | 'calculate_cart' | 'generate_payment' | 'handle_payment_failure' | 'scrub_pii' | 'analyze_workspace_vision' | 'eval_ecosystem_cross_sell' | 'cross_sell_converted';
   input: Record<string, any>;
   output: Record<string, any>;
   status: 'executing' | 'success' | 'blocked' | 'failed';
@@ -91,7 +91,8 @@ export interface SecurityAlert {
     | 'PII_DETECTED_AND_MASKED'
     | 'UNAUTHORIZED_PAYMENT_GATE_BLOCKED'
     | 'OUT_OF_DOMAIN_REQUEST'
-    | 'SUSPICIOUS_CART_MANIPULATION';
+    | 'SUSPICIOUS_CART_MANIPULATION'
+    | 'URGENCY_COST_PENALTY_APPLIED';
   message: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   timestamp: string;
