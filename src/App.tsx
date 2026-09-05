@@ -1001,7 +1001,7 @@ export function App() {
       {/* Global Footer for subpages (excluding full-screen concierge view) */}
       {currentTab !== 'home' && currentTab !== 'concierge' && (
         <footer className="w-full border-t border-stone-800/80 bg-stone-950 py-10 px-6 sm:px-12 text-stone-400 text-xs font-mono">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <TactileMonogramIcon className="w-6 h-6 shrink-0 drop-shadow-sm" />
               <span className="font-editorial text-sm font-bold text-white">Veluno Tech & Acoustics</span>

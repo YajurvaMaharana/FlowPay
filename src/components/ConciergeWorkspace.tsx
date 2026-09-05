@@ -359,7 +359,7 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
         )}
 
         {activeTab === 'audit' && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 max-w-7xl mx-auto w-full">
+          <div className="flex-1 min-h-0 overflow-y-auto w-full">
             <AuditTrailPanel
               metrics={securityMetrics}
               alerts={securityAlerts}
@@ -373,7 +373,7 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
         )}
 
         {activeTab === 'catalog' && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 max-w-7xl mx-auto w-full">
+          <div className="flex-1 min-h-0 overflow-y-auto w-full">
             <CatalogView
               onSelectProduct={onOpenProductDetail}
               onAddToCart={onAddToCart}
@@ -386,7 +386,7 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
         )}
 
         {activeTab === 'cart' && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 max-w-3xl mx-auto w-full">
+          <div className="flex-1 min-h-0 overflow-y-auto w-full">
             <CartDrawer
               items={cart}
               calculation={cartCalculation}
@@ -406,7 +406,7 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
         )}
 
         {activeTab === 'security' && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 max-w-7xl mx-auto w-full">
+          <div className="flex-1 min-h-0 overflow-y-auto w-full">
             <SecurityConsole
               metrics={securityMetrics}
               alerts={securityAlerts}

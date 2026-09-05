@@ -276,9 +276,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Main Messages Scroll Container */}
       <div 
         id="messages-scroll-area"
-        className="flex-1 overflow-y-auto p-4 sm:p-6"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 py-6"
       >
-        <div className="max-w-5xl mx-auto space-y-4 w-full">
+        <div className="w-full space-y-4">
         {messages.map((message) => {
           const isLatestAgentWaiting = Boolean(
             isWaitingForNextTurn && 
@@ -338,8 +338,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Input Area Form & PII Real-time Warning */}
-      <div className="p-4 bg-neutral-950 border-t border-neutral-800 shrink-0 space-y-2 z-10">
-        <div className="max-w-5xl mx-auto w-full space-y-2">
+      <div className="px-4 sm:px-6 py-4 bg-neutral-950 border-t border-neutral-800 shrink-0 space-y-2 z-10">
+        <div className="w-full space-y-2">
         {/* Real-time PII Alert Banner */}
         {piiWarning && (
           <div className="px-3 py-2 rounded-xl bg-amber-950/80 border border-amber-600/70 text-amber-200 text-xs flex items-center gap-2 animate-fadeIn font-mono">

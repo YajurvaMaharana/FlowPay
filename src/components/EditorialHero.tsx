@@ -169,25 +169,15 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
   ];
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 md:p-10 lg:p-12 overflow-hidden bg-neutral-950">
+    <div className="relative w-full min-h-screen flex flex-col overflow-hidden bg-neutral-950">
       
       {/* Editorial Texture Background Layer */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] pointer-events-none" />
       
-      {/* Floating Circular Badge '03' (Matching Reference Composition) */}
-      <div className="relative z-10 mb-5 md:mb-6">
-        <div 
-          id="editorial-badge-03"
-          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-neutral-800/80 border border-neutral-700/60 backdrop-blur-md flex items-center justify-center text-neutral-300 font-semibold text-sm md:text-base tracking-widest shadow-lg shadow-black/40 select-none animate-pulse-subtle"
-        >
-          03
-        </div>
-      </div>
-
       {/* Main Architectural Editorial Showcase Card */}
       <div 
         id="editorial-main-frame"
-        className="relative w-full max-w-7xl h-[82vh] min-h-[640px] max-h-[860px] rounded-[28px] sm:rounded-[36px] overflow-hidden border border-neutral-700/40 shadow-2xl shadow-black/80 flex flex-col justify-between"
+        className="relative w-full h-screen min-h-[640px] overflow-hidden flex flex-col justify-between"
       >
         {/* Background Architectural Scene with Interior Concrete, Monstera Plant & Modern Curated Tech Workspace */}
         <div className="absolute inset-0 z-0">
@@ -619,15 +609,15 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
       </div>
 
       {/* Subtle Footer Meta Badges */}
-      <div className="relative z-10 w-full max-w-7xl px-4 mt-4 flex flex-wrap items-center justify-between text-[11px] text-neutral-400 font-mono">
-        <div className="flex items-center gap-3">
+      <div className="absolute bottom-4 left-6 right-6 z-10 flex flex-wrap items-center justify-between text-[11px] text-neutral-400 font-mono">
+        <div className="flex items-center gap-3 drop-shadow">
           <span>FlowPay Commerce Engine</span>
           <span>•</span>
           <span>Razorpay Direct Gateway</span>
           <span>•</span>
           <span>256-Bit TLS Encryption</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 drop-shadow">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           <span>Agent Protocol: Zero-Trust Strict</span>
         </div>

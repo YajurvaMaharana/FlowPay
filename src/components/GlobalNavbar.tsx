@@ -101,7 +101,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
       id="global-navbar"
       className="sticky top-0 z-40 w-full px-4 sm:px-8 py-3.5 sm:py-4 bg-neutral-950/85 backdrop-blur-2xl border-b border-neutral-800/80 shadow-lg shadow-black/50 transition-all"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="w-full flex items-center justify-between gap-4">
         
         {/* Left Brand: Tactile Monogram "V" Logo + "Veluno" */}
         <div className="flex items-center gap-3 shrink-0">
