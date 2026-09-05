@@ -50,10 +50,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [registerStep, setRegisterStep] = useState<1 | 2>(1); // 1: Auth Info, 2: Profile Setup
 
   // Profile Form State
-  const [email, setEmail] = useState('valentinine14feb@gmail.com');
-  const [password, setPassword] = useState('velunoSecure2026');
-  const [name, setName] = useState('Valentin');
-  const [phone, setPhone] = useState('+91 98765 43210');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [avatar, setAvatar] = useState(PRESET_AVATARS[0].url);
   
   const [showPassword, setShowPassword] = useState(false);
@@ -97,9 +97,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       
       setTimeout(() => {
         onAuthenticate({
-          name: name || 'Valentin',
-          email: email || 'valentinine14feb@gmail.com',
-          phone: phone || '+91 98765 43210',
+          name: name || 'User',
+          email: email || 'user@example.com',
+          phone: phone || '',
           avatar: avatar || PRESET_AVATARS[0].url,
           isAuthenticated: true
         });
@@ -116,9 +116,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setSuccessMessage('Authenticated via Google OAuth 2.0 Secure Session');
       setTimeout(() => {
         onAuthenticate({
-          name: 'Valentin (Google)',
-          email: 'valentinine14feb@gmail.com',
-          phone: '+91 98765 43210',
+          name: 'Google User',
+          email: 'google@example.com',
+          phone: '',
           avatar: PRESET_AVATARS[0].url,
           isAuthenticated: true
         });
@@ -149,9 +149,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       setTimeout(() => {
         onAuthenticate({
-          name: name.trim() || 'Valentin',
-          email: email.trim() || 'valentinine14feb@gmail.com',
-          phone: phone.trim() || '+91 98765 43210',
+          name: name.trim() || 'User',
+          email: email.trim() || 'user@example.com',
+          phone: phone.trim() || '',
           avatar: avatar,
           isAuthenticated: true
         });
@@ -282,7 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="valentinine14feb@gmail.com"
+                    placeholder="name@example.com"
                     className="w-full py-2.5 pl-9 pr-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-mono"
                   />
                   <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -304,7 +304,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
+                    placeholder="••••••••"
                     className="w-full py-2.5 pl-9 pr-9 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-mono"
                   />
                   <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -354,7 +354,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Valentin"
+                  placeholder="Enter your full name"
                   className="w-full py-2.5 pl-9 pr-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all"
                 />
                 <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -371,7 +371,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="valentinine14feb@gmail.com"
+                  placeholder="name@example.com"
                   className="w-full py-2.5 pl-9 pr-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-mono"
                 />
                 <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -388,7 +388,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="••••••••"
                   className="w-full py-2.5 pl-9 pr-9 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-mono"
                 />
                 <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -445,7 +445,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Valentin"
+                    placeholder="Enter your full name"
                     className="w-full py-2.5 pl-9 pr-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-medium"
                   />
                   <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -463,7 +463,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="valentinine14feb@gmail.com"
+                    placeholder="name@example.com"
                     className="w-full py-2.5 pl-9 pr-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-mono"
                   />
                   <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -481,7 +481,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
+                    placeholder="Enter your phone number"
                     className="w-full py-2.5 pl-9 pr-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all font-mono"
                   />
                   <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
