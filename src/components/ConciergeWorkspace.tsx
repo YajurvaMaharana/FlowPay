@@ -26,6 +26,8 @@ export interface ConciergeWorkspaceProps {
   cartCalculation: CartCalculation;
   appliedDiscount: number;
   couponCode?: string;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
   securityMetrics: SecurityMetrics;
   securityAlerts: SecurityAlert[];
   toolCallsHistory: ToolCallEvent[];
@@ -65,6 +67,8 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
   cartCalculation,
   appliedDiscount,
   couponCode,
+  isAuthenticated = false,
+  onRequireAuth,
   securityMetrics,
   securityAlerts,
   toolCallsHistory,
@@ -322,6 +326,8 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
               cartCalculation={cartCalculation}
               appliedDiscount={appliedDiscount}
               couponCode={couponCode}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={onRequireAuth}
               onSendMessage={onSendMessage}
               onQuickReply={(reply) => {
                 if (reply === 'View Tax Invoice' && activePaymentOrder) {
@@ -386,6 +392,8 @@ export const ConciergeWorkspace: React.FC<ConciergeWorkspaceProps> = ({
               calculation={cartCalculation}
               appliedDiscount={appliedDiscount}
               couponCode={couponCode || null}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={onRequireAuth}
               onUpdateQuantity={onUpdateCartQuantity}
               onRemoveItem={onRemoveCartItem}
               onApplyCoupon={onApplyCoupon}

@@ -10,6 +10,8 @@ export type CheckoutState = 'pending_payment' | 'success' | 'expired' | 'failed'
 
 interface PaymentLinkCardProps {
   order: PaymentOrder;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
   onOpenPaymentModal?: (order: PaymentOrder) => void;
   onSimulateFailure?: (order: PaymentOrder) => void;
   onOpenInvoice?: (order: PaymentOrder) => void;
@@ -19,6 +21,8 @@ interface PaymentLinkCardProps {
 
 export const PaymentLinkCard: React.FC<PaymentLinkCardProps> = ({
   order,
+  isAuthenticated = false,
+  onRequireAuth,
   onOpenPaymentModal,
   onSimulateFailure,
   onOpenInvoice,
@@ -103,6 +107,14 @@ export const PaymentLinkCard: React.FC<PaymentLinkCardProps> = ({
     if (checkoutState === 'success') {
       if (onOpenInvoice) {
         onOpenInvoice(order);
+      }
+      return;
+    }
+
+    // AUTH GUARD: Intercept unauthenticated users before checkout
+    if (!isAuthenticated) {
+      if (onRequireAuth) {
+        onRequireAuth();
       }
       return;
     }

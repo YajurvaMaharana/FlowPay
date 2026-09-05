@@ -7,6 +7,8 @@ interface CartDrawerProps {
   calculation: CartCalculation;
   appliedDiscount: number;
   couponCode: string | null;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemoveItem: (productId: string) => void;
   onApplyCoupon: (code: string) => void;
@@ -19,6 +21,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   calculation,
   appliedDiscount,
   couponCode,
+  isAuthenticated = false,
+  onRequireAuth,
   onUpdateQuantity,
   onRemoveItem,
   onApplyCoupon,
@@ -46,6 +50,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   };
 
   const handleRazorpayCheckout = async () => {
+    if (!isAuthenticated) {
+      if (onRequireAuth) {
+        onRequireAuth();
+      }
+      return;
+    }
+
     try {
       const response = await fetch('/api/create-order', {
         method: 'POST',

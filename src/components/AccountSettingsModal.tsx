@@ -20,6 +20,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 }) => {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
+  const [phone, setPhone] = useState(user.phone || '+91 98765 43210');
+  const [avatar, setAvatar] = useState(user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80');
   const [street, setStreet] = useState(user.address?.street || '42 Indiranagar 100ft Road');
   const [city, setCity] = useState(user.address?.city || 'Bengaluru');
   const [state, setState] = useState(user.address?.state || 'Karnataka');
@@ -31,11 +33,26 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setAvatar(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateUser({
       name,
       email,
+      phone,
+      avatar,
       address: {
         street,
         city,
@@ -107,6 +124,26 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
             <h3 className="font-editorial font-bold text-xs uppercase tracking-wider text-neutral-400">
               Profile Identity
             </h3>
+            
+            {/* Live Profile Card */}
+            <div className="p-3 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center gap-3">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-neutral-700 shrink-0">
+                <img src={avatar} alt={name} className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-xs text-white truncate">{name}</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                </div>
+                <p className="text-[10px] text-neutral-400 font-mono truncate">{email}</p>
+                <p className="text-[10px] text-neutral-500 font-mono truncate">{phone}</p>
+              </div>
+              <label className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-semibold cursor-pointer border border-neutral-700 transition-colors">
+                <span>Change Photo</span>
+                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              </label>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] text-neutral-400 mb-1">Full Name</label>
@@ -118,12 +155,31 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-neutral-400 mb-1">Email (PII Protected)</label>
+                <label className="block text-[11px] text-neutral-400 mb-1">Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full py-2 px-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white font-mono focus:outline-none focus:border-neutral-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-neutral-400 mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full py-2 px-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white font-mono focus:outline-none focus:border-neutral-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-neutral-400 mb-1">Profile Picture URL</label>
+                <input
+                  type="text"
+                  value={avatar}
+                  onChange={(e) => setAvatar(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full py-2 px-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white font-mono text-[10px] focus:outline-none focus:border-neutral-500 transition-colors"
                 />
               </div>
             </div>

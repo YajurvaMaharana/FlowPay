@@ -21,6 +21,7 @@ interface EditorialHeroProps {
   onOpenSavedGear: () => void;
   onOpenOrders: () => void;
   onOpenSettings: () => void;
+  onOpenEditProfile?: () => void;
   onOpenAuthModal: (mode?: 'login' | 'register') => void;
   onLogout: () => void;
   onNavigate: (tab: NavigationTab) => void;
@@ -40,6 +41,7 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
   onOpenSavedGear,
   onOpenOrders,
   onOpenSettings,
+  onOpenEditProfile,
   onOpenAuthModal,
   onLogout,
   onNavigate,
@@ -301,124 +303,150 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
               )}
             </button>
 
-            {/* User Profile Avatar with Popover */}
-            <div className="relative" ref={profileMenuRef}>
+            {/* Unified Authentication Trigger or Avatar */}
+            {!user.isAuthenticated ? (
               <button
-                id="hero-profile-avatar-btn"
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-neutral-400/60 shadow-md ring-2 ring-black/40 hover:scale-105 transition-all flex items-center justify-center bg-neutral-800"
-                title={user.isAuthenticated ? `${user.name} Profile` : 'Sign In'}
+                id="hero-signin-btn"
+                onClick={() => onOpenAuthModal('login')}
+                className="px-3.5 py-1.5 rounded-xl border border-white/20 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold backdrop-blur-md transition-all shadow-md active:scale-95 flex items-center gap-1.5 group"
               >
-                {user.isAuthenticated && user.avatar ? (
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-4 h-4 text-neutral-300" />
-                )}
+                <User className="w-3.5 h-3.5 text-zinc-300 group-hover:text-white transition-colors" />
+                <span>Sign In</span>
               </button>
-              {/* Zero-Trust indicator dot on avatar */}
-              <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-neutral-900 ${
-                user.isAuthenticated ? 'bg-green-400' : 'bg-neutral-500'
-              }`} />
-
-              {/* Glassmorphic Profile Popover Menu */}
-              {isProfileOpen && (
-                <div 
-                  id="hero-profile-dropdown-popover"
-                  className="absolute right-0 mt-3 w-72 rounded-2xl bg-neutral-900/95 border border-neutral-700/80 shadow-2xl p-2.5 z-50 backdrop-blur-2xl animate-fadeIn space-y-2"
+            ) : (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  id="hero-profile-avatar-btn"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-neutral-400/60 shadow-md ring-2 ring-black/40 hover:scale-105 transition-all flex items-center justify-center bg-neutral-800"
+                  title={`${user.name} Profile`}
                 >
-                  {/* User Identity Header Card */}
-                  <div className="p-2.5 rounded-xl bg-neutral-800/80 border border-neutral-700/50 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-600 shrink-0">
-                      <img 
-                        src={user.avatar} 
-                        alt={user.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-xs text-white truncate">
-                          {user.isAuthenticated ? user.name : 'Guest User'}
-                        </span>
-                        {user.isAuthenticated && (
+                  {user.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-4 h-4 text-neutral-300" />
+                  )}
+                </button>
+                {/* Zero-Trust indicator dot on avatar */}
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-neutral-900 bg-green-400" />
+
+                {/* Glassmorphic Profile Popover Menu */}
+                {isProfileOpen && (
+                  <div 
+                    id="hero-profile-dropdown-popover"
+                    className="absolute right-0 mt-3 w-72 rounded-2xl bg-neutral-900/95 border border-neutral-700/80 shadow-2xl p-2.5 z-50 backdrop-blur-2xl animate-fadeIn space-y-2 text-neutral-100"
+                  >
+                    {/* User Identity Header Card */}
+                    <div className="p-2.5 rounded-xl bg-neutral-800/80 border border-neutral-700/50 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-600 shrink-0">
+                        <img 
+                          src={user.avatar} 
+                          alt={user.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-xs text-white truncate">
+                            {user.name}
+                          </span>
                           <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                        </div>
+                        <p className="text-[10px] text-neutral-400 truncate font-mono">
+                          {user.email}
+                        </p>
+                        {user.phone && (
+                          <p className="text-[9px] text-zinc-500 font-mono truncate">
+                            {user.phone}
+                          </p>
                         )}
                       </div>
-                      <p className="text-[10px] text-neutral-400 truncate font-mono">
-                        {user.isAuthenticated ? user.email : 'guest@veluno.com'}
-                      </p>
                     </div>
-                  </div>
 
-                  {/* Status Indicator */}
-                  <div className="px-2 py-1 flex items-center justify-between text-[10px] font-mono text-neutral-400 border-b border-neutral-800 pb-2">
-                    <span className="flex items-center gap-1 text-green-400 font-medium">
-                      <ShieldCheck className="w-3 h-3" />
-                      Zero-Trust Verified
-                    </span>
-                    <span>Session: 256-Bit</span>
-                  </div>
+                    {/* Status Indicator */}
+                    <div className="px-2 py-1 flex items-center justify-between text-[10px] font-mono text-neutral-400 border-b border-neutral-800 pb-2">
+                      <span className="flex items-center gap-1 text-green-400 font-medium">
+                        <ShieldCheck className="w-3 h-3" />
+                        Zero-Trust Active
+                      </span>
+                      <span>Session: 256-Bit</span>
+                    </div>
 
-                  {/* Popover Action Links */}
-                  <div className="space-y-0.5 text-xs">
-                    <button
-                      id="hero-profile-menu-orders"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        onOpenOrders();
-                      }}
-                      className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center justify-between transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Package className="w-4 h-4 text-neutral-400" />
-                        <span className="font-medium">My Orders</span>
-                      </div>
-                      {user.orders.length > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-neutral-950 text-neutral-300 text-[10px] font-mono font-bold border border-neutral-700">
-                          {user.orders.length}
-                        </span>
-                      )}
-                    </button>
+                    {/* Popover Action Links */}
+                    <div className="space-y-0.5 text-xs">
+                      <button
+                        id="hero-profile-menu-orders"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onOpenOrders();
+                        }}
+                        className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center justify-between transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Package className="w-4 h-4 text-neutral-400" />
+                          <span className="font-medium">My Orders</span>
+                        </div>
+                        {user.orders.length > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-neutral-950 text-neutral-300 text-[10px] font-mono font-bold border border-neutral-700">
+                            {user.orders.length}
+                          </span>
+                        )}
+                      </button>
 
-                    <button
-                      id="hero-profile-menu-saved"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        onOpenSavedGear();
-                      }}
-                      className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center justify-between transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Bookmark className="w-4 h-4 text-red-400" />
-                        <span className="font-medium">Saved Gear</span>
-                      </div>
-                      {savedCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-red-950 text-red-300 text-[10px] font-mono font-bold border border-red-800">
-                          {savedCount}
-                        </span>
-                      )}
-                    </button>
+                      <button
+                        id="hero-profile-menu-saved"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onOpenSavedGear();
+                        }}
+                        className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center justify-between transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Bookmark className="w-4 h-4 text-red-400" />
+                          <span className="font-medium">Saved Gear</span>
+                        </div>
+                        {savedCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-red-950 text-red-300 text-[10px] font-mono font-bold border border-red-800">
+                            {savedCount}
+                          </span>
+                        )}
+                      </button>
 
-                    <button
-                      id="hero-profile-menu-settings"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        onOpenSettings();
-                      }}
-                      className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center gap-2.5 transition-colors"
-                    >
-                      <Settings className="w-4 h-4 text-neutral-400" />
-                      <span className="font-medium">Account Settings</span>
-                    </button>
-                  </div>
+                      <button
+                        id="hero-profile-menu-edit-profile"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          if (onOpenEditProfile) {
+                            onOpenEditProfile();
+                          } else {
+                            onOpenSettings();
+                          }
+                        }}
+                        className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center gap-2.5 transition-colors"
+                      >
+                        <User className="w-4 h-4 text-emerald-400" />
+                        <span className="font-semibold text-white">Edit Profile</span>
+                      </button>
 
-                  {/* Auth Button: Logout or Login */}
-                  <div className="pt-1.5 border-t border-neutral-800">
-                    {user.isAuthenticated ? (
+                      <button
+                        id="hero-profile-menu-settings"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onOpenSettings();
+                        }}
+                        className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800/80 text-neutral-200 hover:text-white flex items-center gap-2.5 transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-neutral-400" />
+                        <span className="font-medium">Account Settings</span>
+                      </button>
+                    </div>
+
+                    {/* Auth Button: Sign Out */}
+                    <div className="pt-1.5 border-t border-neutral-800">
                       <button
                         id="hero-profile-menu-logout"
                         onClick={() => {
@@ -430,27 +458,12 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
                         <LogOut className="w-4 h-4 text-red-400" />
                         <span>Sign Out</span>
                       </button>
-                    ) : (
-                      <button
-                        id="hero-profile-menu-login"
-                        onClick={() => {
-                          setIsProfileOpen(false);
-                          onOpenAuthModal('login');
-                        }}
-                        className="w-full px-2.5 py-2 rounded-xl text-left bg-neutral-600 hover:bg-neutral-500 text-white flex items-center justify-between transition-colors text-xs font-semibold"
-                      >
-                        <div className="flex items-center gap-2">
-                          <LogIn className="w-4 h-4" />
-                          <span>Sign In / Register</span>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                    </div>
 
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* AI Assistant Quick Toggle Button */}
             <button

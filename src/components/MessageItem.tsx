@@ -13,6 +13,8 @@ interface MessageItemProps {
   message: Message;
   isWaitingForNextTurn?: boolean;
   nextTurnCountdown?: number | null;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
   onQuickReplyClick: (reply: string) => void;
   onGatedActionConfirm: (action: NonNullable<Message['gatedAction']>, event?: React.MouseEvent) => void;
   onOpenProductDetail: (product: Product) => void;
@@ -29,6 +31,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isWaitingForNextTurn = false,
   nextTurnCountdown,
+  isAuthenticated = false,
+  onRequireAuth,
   onQuickReplyClick,
   onGatedActionConfirm,
   onOpenProductDetail,
@@ -405,6 +409,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {message.paymentOrder && (
           <PaymentLinkCard
             order={message.paymentOrder}
+            isAuthenticated={isAuthenticated}
+            onRequireAuth={onRequireAuth}
             onOpenPaymentModal={onOpenPaymentModal}
             onSimulateFailure={onSimulateFailure}
             onOpenInvoice={onOpenInvoice}

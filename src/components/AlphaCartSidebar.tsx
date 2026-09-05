@@ -26,6 +26,8 @@ interface AlphaCartSidebarProps {
   cartCalculation: CartCalculation;
   appliedDiscount: number;
   couponCode?: string;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
   securityMetrics: SecurityMetrics;
   securityAlerts: SecurityAlert[];
   toolCallsHistory: ToolCallEvent[];
@@ -66,6 +68,8 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
   cartCalculation,
   appliedDiscount,
   couponCode,
+  isAuthenticated = false,
+  onRequireAuth,
   securityMetrics,
   securityAlerts,
   toolCallsHistory,
@@ -352,6 +356,8 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
               cartCalculation={cartCalculation}
               appliedDiscount={appliedDiscount}
               couponCode={couponCode}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={onRequireAuth}
               onSendMessage={onSendMessage}
               onQuickReply={(reply) => {
                 if (reply === 'View Tax Invoice' && activePaymentOrder) {
@@ -409,6 +415,8 @@ export const AlphaCartSidebar: React.FC<AlphaCartSidebarProps> = ({
               calculation={cartCalculation}
               appliedDiscount={appliedDiscount}
               couponCode={couponCode || null}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={onRequireAuth}
               onUpdateQuantity={onUpdateCartQuantity}
               onRemoveItem={onRemoveCartItem}
               onApplyCoupon={onApplyCoupon}

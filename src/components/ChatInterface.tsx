@@ -17,6 +17,8 @@ interface ChatInterfaceProps {
   cartCalculation: CartCalculation;
   appliedDiscount: number;
   couponCode?: string;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
   onSendMessage: (text: string, imageBase64?: string) => void;
   onQuickReply: (reply: string) => void;
   onGatedConfirm: (action: NonNullable<Message['gatedAction']>) => void;
@@ -46,6 +48,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   cartCalculation,
   appliedDiscount,
   couponCode,
+  isAuthenticated = false,
+  onRequireAuth,
   onSendMessage,
   onQuickReply,
   onGatedConfirm,
@@ -288,6 +292,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               message={message}
               isWaitingForNextTurn={isLatestAgentWaiting}
               nextTurnCountdown={turnDelayCountdown}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={onRequireAuth}
               onQuickReplyClick={onQuickReply}
               onGatedActionConfirm={handleGatedConfirmWrapper}
               onOpenProductDetail={onOpenProductDetail}

@@ -32,6 +32,7 @@ import { AuthModal } from './components/AuthModal';
 import { MyOrdersModal } from './components/MyOrdersModal';
 import { SavedGearModal } from './components/SavedGearModal';
 import { AccountSettingsModal } from './components/AccountSettingsModal';
+import { EditProfileModal } from './components/EditProfileModal';
 import { RazorpayModal } from './components/RazorpayModal';
 import { TactileMonogramIcon } from './components/TactileMonogramLogo';
 
@@ -46,27 +47,43 @@ export function App() {
   };
 
   // User Profile & Authentication State
-  const [user, setUser] = useState<UserProfile>({
-    id: 'usr_valentin_01',
-    name: 'Valentin',
-    email: 'valentinine14feb@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&auto=format&fit=crop&q=80',
-    isAuthenticated: true,
-    savedGearIds: ['prod_apex_anc', 'prod_keychron_mech'],
+  const defaultUserState: UserProfile = {
+    id: 'usr_guest',
+    name: '',
+    email: '',
+    phone: '',
+    avatar: '',
+    isAuthenticated: false,
+    savedGearIds: [],
     orders: [],
-    address: {
-      street: '42 Indiranagar 100ft Road',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      pincode: '560038',
-      country: 'India'
-    },
     preferences: {
       piiStrictMasking: true,
       autoApplyMaxDiscount: true,
       currency: 'INR'
     }
+  };
+
+  const [user, setUser] = useState<UserProfile>(() => {
+    try {
+      const savedUser = localStorage.getItem('veluno_user_session');
+      if (savedUser) {
+        return JSON.parse(savedUser);
+      }
+    } catch (error) {
+      console.error('Failed to parse user session from local storage:', error);
+    }
+    // Fallback to initial default state (unauthenticated)
+    return defaultUserState;
   });
+
+  // Persist user state whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('veluno_user_session', JSON.stringify(user));
+    } catch (error) {
+      console.error('Failed to save user session to local storage:', error);
+    }
+  }, [user]);
 
   // AI Agent Sidebar State
   const [isAgentSidebarOpen, setIsAgentSidebarOpen] = useState(false);
@@ -110,9 +127,11 @@ export function App() {
   // User Modals
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [pendingCheckoutOrder, setPendingCheckoutOrder] = useState<PaymentOrder | null>(null);
   const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
   const [isSavedGearModalOpen, setIsSavedGearModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
 
   // Conversation History
   const [isLoading, setIsLoading] = useState(false);
@@ -623,6 +642,12 @@ export function App() {
 
   // Payment Action Handler: Triggers the actual Razorpay Gateway Modal
   const handleOpenPaymentModal = (order: PaymentOrder) => {
+    if (!user.isAuthenticated) {
+      setPendingCheckoutOrder(order);
+      setAuthModalMode('login');
+      setIsAuthModalOpen(true);
+      return;
+    }
     setActivePaymentOrder(order);
     setRazorpayOrder(order);
     setIsRazorpayModalOpen(true);
@@ -801,13 +826,25 @@ export function App() {
       isAuthenticated: true
     }));
     setIsAuthModalOpen(false);
+
+    if (pendingCheckoutOrder) {
+      const orderToCheckout = pendingCheckoutOrder;
+      setPendingCheckoutOrder(null);
+      setTimeout(() => {
+        setActivePaymentOrder(orderToCheckout);
+        setRazorpayOrder(orderToCheckout);
+        setIsRazorpayModalOpen(true);
+      }, 400);
+    }
   };
 
   const handleLogout = () => {
-    setUser((prev) => ({
-      ...prev,
-      isAuthenticated: false
-    }));
+    try {
+      localStorage.removeItem('veluno_user_session');
+    } catch (error) {
+      console.error('Failed to clear user session from local storage:', error);
+    }
+    setUser(defaultUserState);
   };
 
   const handleUpdateUser = (updatedData: Partial<UserProfile>) => {
@@ -816,6 +853,7 @@ export function App() {
       ...updatedData
     }));
     setIsSettingsModalOpen(false);
+    setIsEditProfileModalOpen(false);
   };
 
   const savedProducts = PRODUCTS.filter((p) => user.savedGearIds.includes(p.id));
@@ -838,6 +876,7 @@ export function App() {
           onOpenSavedGear={() => setIsSavedGearModalOpen(true)}
           onOpenOrders={() => setIsOrdersModalOpen(true)}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
+          onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
           onOpenAuthModal={(mode) => {
             setAuthModalMode(mode || 'login');
             setIsAuthModalOpen(true);
@@ -866,6 +905,7 @@ export function App() {
             onOpenSavedGear={() => setIsSavedGearModalOpen(true)}
             onOpenOrders={() => setIsOrdersModalOpen(true)}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
+            onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
             onOpenAuthModal={(mode) => {
               setAuthModalMode(mode || 'login');
               setIsAuthModalOpen(true);
@@ -922,6 +962,11 @@ export function App() {
               cartCalculation={cartCalculation}
               appliedDiscount={appliedDiscount}
               couponCode={couponCode}
+              isAuthenticated={user.isAuthenticated}
+              onRequireAuth={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
               securityMetrics={securityMetrics}
               securityAlerts={securityAlerts}
               toolCallsHistory={toolCallsHistory}
@@ -1056,6 +1101,13 @@ export function App() {
         user={user}
         onClose={() => setIsSettingsModalOpen(false)}
         onUpdateUser={handleUpdateUser}
+      />
+
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        user={user}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        onUpdateProfile={handleUpdateUser}
       />
 
     </div>
