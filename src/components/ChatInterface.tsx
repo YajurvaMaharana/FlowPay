@@ -88,6 +88,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [inputCoupon, setInputCoupon] = useState('');
   const [turnDelayCountdown, setTurnDelayCountdown] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const onNextA2ATurnRef = useRef(onNextA2ATurn);
+
+  useEffect(() => {
+    onNextA2ATurnRef.current = onNextA2ATurn;
+  }, [onNextA2ATurn]);
 
   // Check if waiting for next turn (last message is Merchant Agent, not loading, not typing)
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -113,13 +118,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     const timer = setInterval(() => {
       setTurnDelayCountdown((prev) => {
-        if (prev === null || prev <= 1) {
+        if (prev === null) return null;
+        if (prev <= 1) {
           clearInterval(timer);
-          // 3-second delay finished: auto-trigger next turn!
-          if (onNextA2ATurn) {
-            onNextA2ATurn();
-          }
-          return null;
+          return 0;
         }
         return prev - 1;
       });
@@ -127,6 +129,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     return () => clearInterval(timer);
   }, [isWaitingForNextTurn, lastMessage?.id]);
+
+  // Auto-trigger next turn when countdown reaches 0
+  useEffect(() => {
+    if (turnDelayCountdown === 0 && isWaitingForNextTurn) {
+      setTurnDelayCountdown(null);
+      if (onNextA2ATurnRef.current) {
+        onNextA2ATurnRef.current();
+      }
+    }
+  }, [turnDelayCountdown, isWaitingForNextTurn]);
 
   const handleSkipDelay = (e?: React.MouseEvent) => {
     if (e) {

@@ -190,7 +190,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="Valentin"
                   className="w-full py-2 pl-9 pr-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
                 />
-                <User className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -tranneutral-y-1/2" />
+                <User className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
           )}
@@ -208,7 +208,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 placeholder="valentinine14feb@gmail.com"
                 className="w-full py-2 pl-9 pr-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors font-mono"
               />
-              <Mail className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -tranneutral-y-1/2" />
+              <Mail className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -232,11 +232,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 placeholder="••••••••••••"
                 className="w-full py-2 pl-9 pr-9 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors font-mono"
               />
-              <Lock className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -tranneutral-y-1/2" />
+              <Lock className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -tranneutral-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>

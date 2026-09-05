@@ -36,6 +36,12 @@ import { RazorpayModal } from './components/RazorpayModal';
 export function App() {
   // Navigation Routing State
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
+  const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
+
+  const handleGlobalSearch = (query: string) => {
+    setGlobalSearchQuery(query);
+    setCurrentTab('shop');
+  };
 
   // User Profile & Authentication State
   const [user, setUser] = useState<UserProfile>({
@@ -818,6 +824,8 @@ export function App() {
           cartCount={totalCartCount}
           savedCount={user.savedGearIds.length}
           user={user}
+          searchQuery={globalSearchQuery}
+          onSearch={handleGlobalSearch}
           onOpenCart={() => { setIsAgentSidebarOpen(true); setAgentSidebarTab('cart'); }}
           onOpenSavedGear={() => setIsSavedGearModalOpen(true)}
           onOpenOrders={() => setIsOrdersModalOpen(true)}
@@ -843,6 +851,8 @@ export function App() {
             savedCount={user.savedGearIds.length}
             user={user}
             securityStatus={securityMetrics.zeroTrustStatus}
+            searchQuery={globalSearchQuery}
+            onSearch={handleGlobalSearch}
             onOpenAgent={(initialQuery) => {
               setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
               if (initialQuery) {
@@ -873,6 +883,8 @@ export function App() {
             onAddToCart={handleAddToCart}
             onToggleSave={handleToggleSaveGear}
             savedGearIds={user.savedGearIds}
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
             onOpenAgent={(query) => {
               setIsAgentSidebarOpen(true); setAgentSidebarTab('chat');
               if (query) handleSendMessage(query);

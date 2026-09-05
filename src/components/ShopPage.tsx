@@ -12,6 +12,8 @@ interface ShopPageProps {
   onAddToCart: (product: Product) => void;
   onToggleSave: (productId: string) => void;
   savedGearIds: string[];
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   onOpenAgent: (query?: string) => void;
 }
 
@@ -20,14 +22,21 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   onAddToCart,
   onToggleSave,
   savedGearIds,
+  searchQuery: externalSearchQuery = '',
+  onSearchChange,
   onOpenAgent
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>(externalSearchQuery);
   const [maxPrice, setMaxPrice] = useState<number>(300000);
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating'>('featured');
   const [addedAnimationId, setAddedAnimationId] = useState<string | null>(null);
+
+  // Sync external search query
+  React.useEffect(() => {
+    setSearchQuery(externalSearchQuery);
+  }, [externalSearchQuery]);
 
   const categories = [
     { id: 'all', label: 'All Masterworks' },
@@ -153,13 +162,17 @@ export const ShopPage: React.FC<ShopPageProps> = ({
             </label>
             <div className="relative">
               <input
+                id="shop-search-input"
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (onSearchChange) onSearchChange(e.target.value);
+                }}
                 placeholder="Search models, DACs, ANC..."
-                className="w-full py-2 pl-8 pr-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
+                className="w-full py-2 pl-8 pr-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 transition-colors"
               />
-              <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-2.5 top-1/2 -tranneutral-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 

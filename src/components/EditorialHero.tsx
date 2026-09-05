@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Search, Heart, ShoppingBag, ArrowLeft, ArrowRight, Sparkles, 
   ShieldCheck, MessageSquare, Compass, ChevronRight, Zap,
-  User, Package, Bookmark, Settings, LogOut, LogIn, CheckCircle2
+  User, Package, Bookmark, Settings, LogOut, LogIn, CheckCircle2,
+  X
 } from 'lucide-react';
 import { NavigationTab, Product, UserProfile } from '../types';
 
@@ -13,6 +14,8 @@ interface EditorialHeroProps {
   savedCount: number;
   user: UserProfile;
   featuredProducts: Product[];
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
   onOpenCart: () => void;
   onOpenSavedGear: () => void;
   onOpenOrders: () => void;
@@ -30,6 +33,8 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
   savedCount,
   user,
   featuredProducts,
+  searchQuery: externalSearchQuery = '',
+  onSearch,
   onOpenCart,
   onOpenSavedGear,
   onOpenOrders,
@@ -40,9 +45,14 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
   securityStatus
 }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sync external search query
+  useEffect(() => {
+    setSearchQuery(externalSearchQuery);
+  }, [externalSearchQuery]);
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -131,11 +141,19 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      onOpenAgent(`Search store for ${searchQuery.trim()}`);
-      setSearchQuery('');
+    if (onSearch) {
+      onSearch(searchQuery.trim());
+    } else if (searchQuery.trim()) {
+      onOpenAgent(`Search catalog for "${searchQuery.trim()}"`);
     } else {
-      onOpenAgent();
+      onNavigate('shop');
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    if (onSearch) {
+      onSearch('');
     }
   };
 
@@ -223,7 +241,7 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
               >
                 {item.label}
                 {item.tab === 'home' && (
-                  <span className="absolute bottom-0 left-1/2 -tranneutral-x-1/2 w-4 h-0.5 bg-white rounded-full" />
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-white rounded-full transition-all" />
                 )}
               </button>
             ))}
@@ -232,17 +250,37 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
           {/* Right Controls: Search bar, Wishlist, Cart, Profile Avatar */}
           <div className="flex items-center gap-3 sm:gap-4">
             
-            {/* Minimalist Search Bar */}
-            <form onSubmit={handleSearchSubmit} className="relative hidden md:block">
+            {/* Interactive Search Bar */}
+            <form onSubmit={handleSearchSubmit} role="search" className="relative hidden md:flex items-center">
+              <button
+                type="submit"
+                id="hero-search-btn"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-white p-0.5 transition-colors cursor-pointer z-10 flex items-center justify-center"
+                title="Search gear & acoustics"
+                aria-label="Search gear & acoustics"
+              >
+                <Search className="w-3.5 h-3.5" />
+              </button>
               <input
                 id="hero-search-input"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search gear..."
-                className="w-36 lg:w-48 py-1.5 pl-8 pr-3 rounded-full bg-white/10 border border-white/15 text-xs text-white placeholder:text-neutral-400 focus:outline-none focus:w-56 focus:bg-neutral-900/90 focus:border-white/30 transition-all backdrop-blur-md"
+                placeholder="Search gear & acoustics..."
+                className="w-40 lg:w-52 py-1.5 pl-8 pr-7 rounded-full bg-white/10 border border-white/15 text-xs text-white placeholder:text-neutral-300 focus:outline-none focus:w-60 focus:bg-neutral-900/90 focus:border-white/40 transition-all backdrop-blur-md"
               />
-              <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -tranneutral-y-1/2 pointer-events-none" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  id="hero-clear-search-btn"
+                  onClick={handleClearSearch}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-white p-0.5 transition-colors"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </form>
 
             {/* Wishlist Button */}
@@ -561,7 +599,7 @@ export const EditorialHero: React.FC<EditorialHeroProps> = ({
               {/* Peeking Next Slide Card Edge on the Right */}
               <div 
                 onClick={handleNext}
-                className="hidden xl:block absolute -right-16 top-1/2 -tranneutral-y-1/2 w-28 h-28 rounded-2xl bg-neutral-900/40 border border-white/5 backdrop-blur-md opacity-40 hover:opacity-75 transition-opacity cursor-pointer overflow-hidden pointer-events-auto"
+                className="hidden xl:block absolute -right-16 top-1/2 -translate-y-1/2 w-28 h-28 rounded-2xl bg-neutral-900/40 border border-white/5 backdrop-blur-md opacity-40 hover:opacity-75 transition-opacity cursor-pointer overflow-hidden pointer-events-auto"
                 title="Next featured piece"
               >
                 <img 

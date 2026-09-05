@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Search, Heart, ShoppingBag, Sparkles, User, Package, Bookmark, 
   Settings, LogOut, LogIn, ShieldCheck, ChevronRight, CheckCircle2,
-  ExternalLink
+  ExternalLink, X
 } from 'lucide-react';
 import { NavigationTab, UserProfile } from '../types';
 
@@ -12,6 +12,8 @@ interface GlobalNavbarProps {
   cartCount: number;
   savedCount: number;
   user: UserProfile;
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
   onOpenCart: () => void;
   onOpenSavedGear: () => void;
   onOpenOrders: () => void;
@@ -27,6 +29,8 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
   cartCount,
   savedCount,
   user,
+  searchQuery: externalSearchQuery = '',
+  onSearch,
   onOpenCart,
   onOpenSavedGear,
   onOpenOrders,
@@ -35,9 +39,14 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
   onLogout,
   onOpenAgent
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize internal state if external search query changes
+  useEffect(() => {
+    setSearchQuery(externalSearchQuery);
+  }, [externalSearchQuery]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -52,19 +61,35 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
+    if (onSearch) {
+      onSearch(searchQuery.trim());
+    } else if (searchQuery.trim()) {
       onOpenAgent(`Search catalog for "${searchQuery.trim()}"`);
-      setSearchQuery('');
     } else {
-      onOpenAgent();
+      onNavigate('shop');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (currentTab === 'shop' && onSearch) {
+      onSearch(val);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    if (onSearch) {
+      onSearch('');
     }
   };
 
   const navItems: { tab: NavigationTab; label: string }[] = [
     { tab: 'home', label: 'Home' },
+    { tab: 'about', label: 'About' },
     { tab: 'shop', label: 'Shop' },
     { tab: 'new-arrivals', label: 'New Arrivals' },
-    { tab: 'about', label: 'About' },
     { tab: 'contact', label: 'Contact Us' }
   ];
 
@@ -99,7 +124,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
           </button>
         </div>
 
-        {/* Center Navigation Links */}
+        {/* Center Navigation Links (Home, About, Shop, New Arrivals, Contact Us) */}
         <nav className="hidden lg:flex items-center gap-7 text-xs sm:text-sm font-medium tracking-wide text-neutral-300">
           {navItems.map((item) => (
             <button
@@ -114,7 +139,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
             >
               {item.label}
               {currentTab === item.tab && (
-                <span className="absolute bottom-0 left-1/2 -tranneutral-x-1/2 w-4 h-0.5 bg-neutral-400 rounded-full" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-white rounded-full transition-all" />
               )}
             </button>
           ))}
@@ -123,17 +148,37 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
         {/* Right Action Controls */}
         <div className="flex items-center gap-2.5 sm:gap-3.5">
           
-          {/* Search Input Bar */}
-          <form onSubmit={handleSearchSubmit} className="relative hidden md:block">
+          {/* Search Input Bar & Interactive Button */}
+          <form onSubmit={handleSearchSubmit} role="search" className="relative hidden md:flex items-center">
+            <button
+              type="submit"
+              id="navbar-search-btn"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 transition-colors cursor-pointer z-10 flex items-center justify-center"
+              title="Search gear & acoustics"
+              aria-label="Search gear & acoustics"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
             <input
               id="navbar-search-input"
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleInputChange}
               placeholder="Search gear & acoustics..."
-              className="w-36 lg:w-48 py-1.5 pl-8 pr-3 rounded-full bg-neutral-900/90 border border-neutral-800 text-xs text-white placeholder:text-neutral-400 focus:outline-none focus:w-56 focus:bg-neutral-900 focus:border-neutral-600 transition-all backdrop-blur-md"
+              className="w-40 lg:w-52 py-1.5 pl-8 pr-7 rounded-full bg-neutral-900/90 border border-neutral-800 text-xs text-white placeholder:text-neutral-400 focus:outline-none focus:w-60 focus:bg-neutral-900 focus:border-neutral-500 transition-all backdrop-blur-md"
             />
-            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -tranneutral-y-1/2 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                id="navbar-clear-search-btn"
+                onClick={handleClearSearch}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 transition-colors"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </form>
 
           {/* Saved Gear / Wishlist Button */}
@@ -177,7 +222,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
               {user.isAuthenticated && user.avatar ? (
                 <img 
                   src={user.avatar} 
-                  alt={user.name}
+                  alt={user.name} 
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -338,12 +383,16 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
           <button
             key={item.tab}
             onClick={() => onNavigate(item.tab)}
-            className={`py-1 ${currentTab === item.tab ? 'text-white font-bold' : 'hover:text-neutral-200'}`}
+            className={`py-1 relative ${currentTab === item.tab ? 'text-white font-bold' : 'hover:text-neutral-200'}`}
           >
             {item.label}
+            {currentTab === item.tab && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-0.5 bg-white rounded-full" />
+            )}
           </button>
         ))}
       </div>
     </header>
   );
 };
+
