@@ -17,13 +17,8 @@ Frontend: React, Tailwind CSS, Lucide React, Vite
 
 Architecture: Component-driven dark editorial aesthetic featuring metallic hardware motifs and zero-trust telemetry panels
 
-├── src/
-│   ├── components/       # Core UI components (Navbar, Concierge, Catalog, Security, Cart)
-│   ├── api/              # Machine-readable UCP/ACP endpoints & audit logging
-│   ├── utils/            # Session storage and cross-persistence logic
-│   └── App.tsx           # Main application router and state container
 
-git clone https://github.com/YajurvaMaharana/FlowPay.git
+git clone https://github.com/YajurvaMaharana/Veluno.git
 
 npm install
 
